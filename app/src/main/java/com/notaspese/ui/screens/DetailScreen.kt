@@ -189,11 +189,26 @@ fun DetailScreen(notaSpeseConSpese: NotaSpeseConSpese?, onNavigateBack: () -> Un
                                     Text("€%.2f".format(notaSpeseConSpese.totalePagatoAzienda), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold, color = ColorCarta) 
                                 }
                                 if (notaSpeseConSpese.haSpeseDipendente) {
+                                    // Dettaglio spese dipendente
+                                    if (notaSpeseConSpese.totalePagatoDipendente > 0) {
+                                        Row(Modifier.fillMaxWidth().padding(vertical = 2.dp), horizontalArrangement = Arrangement.SpaceBetween) { 
+                                            Text("  Spese", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
+                                            Text("€%.2f".format(notaSpeseConSpese.totalePagatoDipendente), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)) 
+                                        }
+                                    }
+                                    // Dettaglio rimborso km
+                                    if (nota.totaleRimborsoKm > 0) {
+                                        Row(Modifier.fillMaxWidth().padding(vertical = 2.dp), horizontalArrangement = Arrangement.SpaceBetween) { 
+                                            Text("  Rimborso Km", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
+                                            Text("€%.2f".format(nota.totaleRimborsoKm), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)) 
+                                        }
+                                    }
+                                    // Totale dipendente
                                     Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) { 
                                         Row(verticalAlignment = Alignment.CenterVertically) {
                                             Icon(Icons.Default.Person, null, Modifier.size(14.dp), tint = ColorContanti)
                                             Spacer(Modifier.width(4.dp))
-                                            Text("Dipendente", style = MaterialTheme.typography.bodySmall)
+                                            Text("Tot. Dipendente", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
                                         }
                                         Text("€%.2f".format(notaSpeseConSpese.totalePagatoDipendenteConKm), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold, color = ColorContanti) 
                                     }
