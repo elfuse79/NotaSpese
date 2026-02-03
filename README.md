@@ -1,6 +1,6 @@
 # NotaSpese - App Gestione Note Spese
 
-**Versione:** 1.0.2
+**Versione:** 1.0.3
 
 App Android per la gestione delle note spese aziendali, sviluppata con Kotlin e Jetpack Compose.
 
@@ -60,6 +60,10 @@ App Android per la gestione delle note spese aziendali, sviluppata con Kotlin e 
 ---
 
 ## 📋 Changelog
+
+### v1.0.3 (Febbraio 2026)
+- Fix generazione PDF: corretta logica visualizzazione colonne
+- Separata logica spese dipendente da rimborso km
 
 ### v1.0.2 (Febbraio 2026)
 - Corretto calcolo "Spese Sostenute Da": mostra solo spese effettive (senza rimborso km)

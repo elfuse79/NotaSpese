@@ -217,6 +217,7 @@ object PdfGenerator {
             val speseAzienda = notaSpeseConSpese.speseAzienda
             val speseDipendente = notaSpeseConSpese.speseDipendente
             val haSpeseDipendente = notaSpeseConSpese.haSpeseDipendente
+            val haRimborsoDipendente = notaSpeseConSpese.haRimborsoDipendente
             
             val tableRowPaint = Paint().apply {
                 textSize = 9f
@@ -513,7 +514,7 @@ object PdfGenerator {
             }
             
             // ===== RIMBORSO DIPENDENTE (solo se ci sono spese pagate dal dipendente, rimborso km o anticipo) =====
-            if (haSpeseDipendente || nota.anticipo > 0) {
+            if (haRimborsoDipendente || nota.anticipo > 0) {
                 checkNewPage(120f)
                 
                 val rimborsoBgPaint = Paint().apply {

@@ -39,6 +39,9 @@ data class NotaSpeseConSpese(
     val speseAzienda: List<Spesa> get() = spese.filter { it.pagatoDa == PagatoDa.AZIENDA }
     val speseDipendente: List<Spesa> get() = spese.filter { it.pagatoDa == PagatoDa.DIPENDENTE }
     
-    // Verifica se ci sono spese del dipendente (per nascondere sezione nel PDF se assenti)
-    val haSpeseDipendente: Boolean get() = speseDipendente.isNotEmpty() || notaSpese.totaleRimborsoKm > 0
+    // Verifica se ci sono spese effettive del dipendente (per mostrare colonna nel PDF)
+    val haSpeseDipendente: Boolean get() = speseDipendente.isNotEmpty()
+    
+    // Verifica se ci sono rimborsi da fare al dipendente (spese + km)
+    val haRimborsoDipendente: Boolean get() = speseDipendente.isNotEmpty() || notaSpese.totaleRimborsoKm > 0
 }
