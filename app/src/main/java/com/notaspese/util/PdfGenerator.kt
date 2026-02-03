@@ -329,7 +329,7 @@ object PdfGenerator {
                 }
                 canvas.drawText("€ ${String.format(Locale.ITALY, "%.2f", notaSpeseConSpese.totalePagatoAzienda)}", leftColX + colWidth - 70f, yPosition + 8f, aziendaTotalPaint)
                 
-                // Totale dipendente include rimborso km
+                // Totale dipendente (solo spese, senza rimborso km)
                 canvas.drawRect(rightColX, yPosition - 5f, rightColX + colWidth, yPosition + 15f, dipendenteTotalBg)
                 canvas.drawText("TOTALE DIPENDENTE:", rightColX + 5f, yPosition + 8f, totalRowPaint)
                 val dipendenteTotalPaint = Paint().apply {
@@ -337,7 +337,7 @@ object PdfGenerator {
                     typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
                     color = android.graphics.Color.parseColor("#2E7D32")
                 }
-                canvas.drawText("€ ${String.format(Locale.ITALY, "%.2f", notaSpeseConSpese.totalePagatoDipendenteConKm)}", rightColX + colWidth - 70f, yPosition + 8f, dipendenteTotalPaint)
+                canvas.drawText("€ ${String.format(Locale.ITALY, "%.2f", notaSpeseConSpese.totalePagatoDipendente)}", rightColX + colWidth - 70f, yPosition + 8f, dipendenteTotalPaint)
                 
                 yPosition += 30f
             } else {
@@ -439,7 +439,7 @@ object PdfGenerator {
                 sosYPosition += LINE_HEIGHT
                 
                 canvas.drawText("Sostenute dal Dipendente", rightX + 10f, sosYPosition, normalPaint)
-                canvas.drawText("€ ${String.format(Locale.ITALY, "%.2f", notaSpeseConSpese.totalePagatoDipendenteConKm)}", rightX + 180f, sosYPosition, normalPaint)
+                canvas.drawText("€ ${String.format(Locale.ITALY, "%.2f", notaSpeseConSpese.totalePagatoDipendente)}", rightX + 180f, sosYPosition, normalPaint)
                 sosYPosition += LINE_HEIGHT
                 
                 yPosition = maxOf(catYPosition, sosYPosition)
