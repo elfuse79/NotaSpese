@@ -599,7 +599,8 @@ object PdfGenerator {
             
             // Calcola altezza box in base ai contenuti
             var boxHeight = 70f
-            if (nota.totaleRimborsoKm > 0) boxHeight += 20f
+            if (haSpeseDipendente) boxHeight += 18f  // Riga spese dipendente
+            if (nota.totaleRimborsoKm > 0) boxHeight += 18f  // Riga rimborso km
             
             // Box totali
             canvas.drawRect(MARGIN, yPosition - 10f, PAGE_WIDTH - MARGIN, yPosition + boxHeight, totalBgPaint)
