@@ -13,17 +13,30 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.notaspese.data.model.APP_VERSION
 import com.notaspese.data.model.NotaSpeseConSpese
 import java.text.SimpleDateFormat
 import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(noteSpese: List<NotaSpeseConSpese>, onNavigateToCreate: () -> Unit, onNavigateToDetail: (Long) -> Unit) {
+fun HomeScreen(noteSpese: List<NotaSpeseConSpese>, onNavigateToCreate: () -> Unit, onNavigateToDetail: (Long) -> Unit, onDeleteNota: (NotaSpeseConSpese) -> Unit = {}) {
+    val dateFormatter = SimpleDateFormat("dd/MM/yyyy", Locale.ITALY)
+    var showDeleteDialog by remember { mutableStateOf<NotaSpeseConSpese?>(null) }
+    
     Scaffold(
         topBar = {
             LargeTopAppBar(
-                title = { Column { Text("Note Spese", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold); Text("${noteSpese.size} trasferte", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)) } },
+                title = { 
+                    Column { 
+                        Text("Note Spese", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("${noteSpese.size} trasferte", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
+                            Spacer(Modifier.width(8.dp))
+                            Text("v$APP_VERSION", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f))
+                        }
+                    } 
+                },
                 colors = TopAppBarDefaults.largeTopAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
             )
         },
@@ -42,11 +55,13 @@ fun HomeScreen(noteSpese: List<NotaSpeseConSpese>, onNavigateToCreate: () -> Uni
             LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxSize().padding(padding)) {
                 itemsIndexed(noteSpese) { _, notaConSpese ->
                     val nota = notaConSpese.notaSpese
+                    val dataInizioStr = dateFormatter.format(Date(nota.dataInizioTrasferta))
                     Card(onClick = { onNavigateToDetail(nota.id) }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) {
                         Column(Modifier.padding(16.dp)) {
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
                                 Column(Modifier.weight(1f)) {
-                                    Text(nota.nomeCognome, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    // Nome con data inizio trasferta
+                                    Text("${nota.nomeCognome} - $dataInizioStr", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                     Row(verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Default.LocationOn, null, Modifier.size(14.dp), tint = MaterialTheme.colorScheme.primary); Spacer(Modifier.width(4.dp)); Text(nota.luogoTrasferta, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)) }
                                 }
                                 Surface(shape = RoundedCornerShape(8.dp), color = MaterialTheme.colorScheme.primaryContainer) { Text("EUR %.2f".format(notaConSpese.totaleSpese), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)) }
@@ -55,6 +70,14 @@ fun HomeScreen(noteSpese: List<NotaSpeseConSpese>, onNavigateToCreate: () -> Uni
                             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Default.Business, null, Modifier.size(14.dp), tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)); Spacer(Modifier.width(4.dp)); Text(nota.cliente, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f), modifier = Modifier.weight(1f))
                                 Text("${notaConSpese.spese.size} spese", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
+                                Spacer(Modifier.width(8.dp))
+                                // Pulsante elimina
+                                IconButton(
+                                    onClick = { showDeleteDialog = notaConSpese },
+                                    modifier = Modifier.size(32.dp)
+                                ) { 
+                                    Icon(Icons.Default.Delete, "Elimina", tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f), modifier = Modifier.size(18.dp)) 
+                                }
                             }
                         }
                     }
@@ -62,5 +85,43 @@ fun HomeScreen(noteSpese: List<NotaSpeseConSpese>, onNavigateToCreate: () -> Uni
                 item { Spacer(Modifier.height(80.dp)) }
             }
         }
+    }
+    
+    // Dialog di conferma eliminazione
+    showDeleteDialog?.let { notaConSpese ->
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = null },
+            icon = { Icon(Icons.Default.Warning, null, tint = MaterialTheme.colorScheme.error) },
+            title = { Text("Elimina Nota Spese") },
+            text = { 
+                Column {
+                    Text("Sei sicuro di voler eliminare questa nota spese?")
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        "${notaConSpese.notaSpese.nomeCognome} - ${dateFormatter.format(Date(notaConSpese.notaSpese.dataInizioTrasferta))}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        "Verranno eliminate anche ${notaConSpese.spese.size} spese e la cartella allegati.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = { 
+                        onDeleteNota(notaConSpese)
+                        showDeleteDialog = null 
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) { Text("Elimina") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = null }) { Text("Annulla") }
+            }
+        )
     }
 }

@@ -23,6 +23,7 @@ import com.notaspese.data.model.*
 import com.notaspese.ui.components.TotaleCard
 import com.notaspese.ui.components.getCategoriaColor
 import com.notaspese.ui.theme.*
+import com.notaspese.data.model.APP_VERSION
 import com.notaspese.util.CsvExporter
 import com.notaspese.util.PdfGenerator
 import java.text.SimpleDateFormat
@@ -156,38 +157,47 @@ fun DetailScreen(notaSpeseConSpese: NotaSpeseConSpese?, onNavigateBack: () -> Un
             item {
                 Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) {
                     Column(Modifier.padding(16.dp)) {
-                        Text("Dettaglio per Categoria", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(bottom = 12.dp))
-                        CategoriaSpesa.entries.forEach { cat ->
-                            val tot = notaSpeseConSpese.totaleByCategoria(cat)
-                            if (tot > 0) { Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) { Row(verticalAlignment = Alignment.CenterVertically) { Box(Modifier.size(8.dp).clip(CircleShape).background(getCategoriaColor(cat))); Spacer(Modifier.width(8.dp)); Text(cat.displayName, style = MaterialTheme.typography.bodyMedium) }; Text("EUR %.2f".format(tot), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium) } }
-                        }
-                        Divider(Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
-                        Text("Per Metodo Pagamento", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f), modifier = Modifier.padding(bottom = 8.dp))
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) { Text("Carta", style = MaterialTheme.typography.labelSmall); Text("EUR %.2f".format(notaSpeseConSpese.totaleByCarta), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, color = ColorCarta) }
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) { Text("Contanti", style = MaterialTheme.typography.labelSmall); Text("EUR %.2f".format(notaSpeseConSpese.totaleContanti), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, color = ColorContanti) }
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) { Text("Altro", style = MaterialTheme.typography.labelSmall); Text("EUR %.2f".format(notaSpeseConSpese.totaleAltro), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, color = ColorAltro) }
-                        }
-                        
-                        // Sezione spese sostenute
-                        Divider(Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
-                        Text("Spese Sostenute Da", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f), modifier = Modifier.padding(bottom = 8.dp))
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) { 
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(Icons.Default.Business, null, Modifier.size(14.dp), tint = ColorCarta)
-                                    Spacer(Modifier.width(4.dp))
-                                    Text("Azienda", style = MaterialTheme.typography.labelSmall)
+                        // Due colonne affiancate: Categoria e Spese Sostenute Da
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                            // Colonna sinistra: Dettaglio per Categoria
+                            Column(Modifier.weight(1f)) {
+                                Text("Per Categoria", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(bottom = 12.dp))
+                                CategoriaSpesa.entries.forEach { cat ->
+                                    val tot = notaSpeseConSpese.totaleByCategoria(cat)
+                                    if (tot > 0) { 
+                                        Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) { 
+                                            Row(verticalAlignment = Alignment.CenterVertically) { 
+                                                Box(Modifier.size(8.dp).clip(CircleShape).background(getCategoriaColor(cat)))
+                                                Spacer(Modifier.width(8.dp))
+                                                Text(cat.displayName, style = MaterialTheme.typography.bodySmall) 
+                                            }
+                                            Text("€%.2f".format(tot), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium) 
+                                        } 
+                                    }
                                 }
-                                Text("EUR %.2f".format(notaSpeseConSpese.totalePagatoAzienda), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, color = ColorCarta) 
                             }
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) { 
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(Icons.Default.Person, null, Modifier.size(14.dp), tint = ColorContanti)
-                                    Spacer(Modifier.width(4.dp))
-                                    Text("Dipendente", style = MaterialTheme.typography.labelSmall)
+                            
+                            // Colonna destra: Spese Sostenute Da
+                            Column(Modifier.weight(1f)) {
+                                Text("Sostenute Da", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(bottom = 12.dp))
+                                Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) { 
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(Icons.Default.Business, null, Modifier.size(14.dp), tint = ColorCarta)
+                                        Spacer(Modifier.width(4.dp))
+                                        Text("Azienda", style = MaterialTheme.typography.bodySmall)
+                                    }
+                                    Text("€%.2f".format(notaSpeseConSpese.totalePagatoAzienda), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold, color = ColorCarta) 
                                 }
-                                Text("EUR %.2f".format(notaSpeseConSpese.totalePagatoDipendente), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, color = ColorContanti) 
+                                if (notaSpeseConSpese.haSpeseDipendente) {
+                                    Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) { 
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(Icons.Default.Person, null, Modifier.size(14.dp), tint = ColorContanti)
+                                            Spacer(Modifier.width(4.dp))
+                                            Text("Dipendente", style = MaterialTheme.typography.bodySmall)
+                                        }
+                                        Text("€%.2f".format(notaSpeseConSpese.totalePagatoDipendenteConKm), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold, color = ColorContanti) 
+                                    }
+                                }
                             }
                         }
                     }

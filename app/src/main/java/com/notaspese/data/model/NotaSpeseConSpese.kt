@@ -20,6 +20,9 @@ data class NotaSpeseConSpese(
     val totalePagatoAzienda: Double get() = spese.filter { it.pagatoDa == PagatoDa.AZIENDA }.sumOf { it.importo }
     val totalePagatoDipendente: Double get() = spese.filter { it.pagatoDa == PagatoDa.DIPENDENTE }.sumOf { it.importo }
     
+    // Totale spese pagate dal dipendente + rimborso km (da usare come "spese dipendente" nel PDF)
+    val totalePagatoDipendenteConKm: Double get() = totalePagatoDipendente + notaSpese.totaleRimborsoKm
+    
     // Totale da rimborsare al dipendente (spese pagate dal dipendente + rimborso km - anticipo)
     val totaleRimborsoDipendente: Double get() = totalePagatoDipendente + notaSpese.totaleRimborsoKm - notaSpese.anticipo
     
@@ -27,6 +30,7 @@ data class NotaSpeseConSpese(
     val totaleRimborsoDipendenteLordo: Double get() = totalePagatoDipendente + notaSpese.totaleRimborsoKm
     
     // Costo complessivo della nota spese (tutte le spese + rimborso km)
+    // NOTA: Il costo km da addebitare al cliente NON incide sul costo complessivo
     val costoComplessivoNotaSpese: Double get() = totaleSpese + notaSpese.totaleRimborsoKm
     
     fun totaleByCategoria(categoria: CategoriaSpesa): Double = spese.filter { it.categoria == categoria }.sumOf { it.importo }
@@ -34,4 +38,7 @@ data class NotaSpeseConSpese(
     // Spese per pagatore
     val speseAzienda: List<Spesa> get() = spese.filter { it.pagatoDa == PagatoDa.AZIENDA }
     val speseDipendente: List<Spesa> get() = spese.filter { it.pagatoDa == PagatoDa.DIPENDENTE }
+    
+    // Verifica se ci sono spese del dipendente (per nascondere sezione nel PDF se assenti)
+    val haSpeseDipendente: Boolean get() = speseDipendente.isNotEmpty() || notaSpese.totaleRimborsoKm > 0
 }

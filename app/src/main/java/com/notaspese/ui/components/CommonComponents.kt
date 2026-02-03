@@ -106,11 +106,19 @@ fun TimePickerField(label: String, selectedTime: String, onTimeSelected: (String
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MetodoPagamentoSelector(selected: MetodoPagamento, onSelect: (MetodoPagamento) -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true) {
+fun MetodoPagamentoSelector(selected: MetodoPagamento, onSelect: (MetodoPagamento) -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true, showOnlyCarta: Boolean = false) {
     Column(modifier = modifier) {
         Text("Metodo di Pagamento", style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(bottom = 8.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-            MetodoPagamento.entries.forEach { metodo ->
+            // Per azienda: mostra solo Carta di Credito
+            // Per dipendente: il metodo è forzato a Pagamento Elettronico (gestito esternamente)
+            val metodiDaMostrare = if (showOnlyCarta) {
+                listOf(MetodoPagamento.CARTA_CREDITO)
+            } else {
+                MetodoPagamento.entries.toList()
+            }
+            
+            metodiDaMostrare.forEach { metodo ->
                 val color = when (metodo) { MetodoPagamento.CARTA_CREDITO -> ColorCarta; MetodoPagamento.CONTANTI -> ColorContanti; MetodoPagamento.ALTRO -> ColorAltro }
                 FilterChip(
                     selected = metodo == selected,
@@ -122,7 +130,7 @@ fun MetodoPagamentoSelector(selected: MetodoPagamento, onSelect: (MetodoPagament
                         selectedLabelColor = if (enabled) color else color.copy(alpha = 0.5f)
                     ),
                     enabled = enabled,
-                    modifier = Modifier.weight(1f)
+                    modifier = if (showOnlyCarta) Modifier.fillMaxWidth() else Modifier.weight(1f)
                 )
             }
         }

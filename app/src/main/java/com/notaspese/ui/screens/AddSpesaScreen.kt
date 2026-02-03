@@ -60,10 +60,12 @@ fun AddSpesaScreen(notaSpeseId: Long, onNavigateBack: () -> Unit, onSave: (Spesa
     var isPdf by remember { mutableStateOf(false) }
     var pagatoDa by remember { mutableStateOf(PagatoDa.AZIENDA) }
     
-    // Se pagato dal dipendente, forza metodo pagamento a Contanti
+    // Se pagato dal dipendente, forza metodo pagamento a Pagamento Elettronico (CONTANTI nel enum)
     LaunchedEffect(pagatoDa) {
         if (pagatoDa == PagatoDa.DIPENDENTE) {
-            metodoPagamento = MetodoPagamento.CONTANTI
+            metodoPagamento = MetodoPagamento.CONTANTI  // "Pag. Elettronico Dip."
+        } else {
+            metodoPagamento = MetodoPagamento.CARTA_CREDITO
         }
     }
     
@@ -224,12 +226,13 @@ fun AddSpesaScreen(notaSpeseId: Long, onNavigateBack: () -> Unit, onSave: (Spesa
                     MetodoPagamentoSelector(
                         selected = metodoPagamento, 
                         onSelect = { if (pagatoDa == PagatoDa.AZIENDA) metodoPagamento = it },
-                        enabled = pagatoDa == PagatoDa.AZIENDA
+                        enabled = pagatoDa == PagatoDa.AZIENDA,
+                        showOnlyCarta = pagatoDa == PagatoDa.AZIENDA  // Mostra solo Carta di Credito per azienda
                     )
                     if (pagatoDa == PagatoDa.DIPENDENTE) {
                         Spacer(Modifier.height(8.dp))
                         Text(
-                            "Se pagato dal dipendente, il metodo è sempre Contanti",
+                            "Metodo: Pagamento Elettronico Dipendente",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                         )

@@ -26,7 +26,12 @@ fun NotaSpeseNavigation(viewModel: NotaSpeseViewModel) {
     
     NavHost(navController = navController, startDestination = Screen.Home.route) {
         composable(Screen.Home.route) { 
-            HomeScreen(noteSpese, { navController.navigate(Screen.CreateNotaSpese.route) }, { id -> viewModel.loadNotaSpese(id); navController.navigate(Screen.Detail.createRoute(id)) }) 
+            HomeScreen(
+                noteSpese, 
+                { navController.navigate(Screen.CreateNotaSpese.route) }, 
+                { id -> viewModel.loadNotaSpese(id); navController.navigate(Screen.Detail.createRoute(id)) },
+                { notaConSpese -> viewModel.deleteNotaSpeseWithFolder(notaConSpese) }
+            ) 
         }
         
         composable(Screen.CreateNotaSpese.route) { 

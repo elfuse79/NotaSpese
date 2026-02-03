@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.dp
 import com.notaspese.data.model.NotaSpese
 import com.notaspese.ui.components.DatePickerField
 import com.notaspese.ui.components.TimePickerField
+import java.util.Calendar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -36,7 +37,15 @@ fun CreateNotaSpeseScreen(onNavigateBack: () -> Unit, onSave: (NotaSpese) -> Uni
     // Campi per i chilometri
     var kmPercorsi by remember { mutableStateOf(if ((existingNota?.kmPercorsi ?: 0.0) > 0) "%.0f".format(existingNota?.kmPercorsi) else "") }
     var costoKmRimborso by remember { mutableStateOf(if ((existingNota?.costoKmRimborso ?: 0.0) > 0) "%.2f".format(existingNota?.costoKmRimborso) else "") }
-    var costoKmCliente by remember { mutableStateOf(if ((existingNota?.costoKmCliente ?: 0.0) > 0) "%.2f".format(existingNota?.costoKmCliente) else "") }
+    var costoKmCliente by remember { mutableStateOf(if ((existingNota?.costoKmCliente ?: 0.0) > 0) "%.2f".format(existingNota?.costoKmCliente) else "0.60") }
+    
+    // Funzione per calcolare l'ultimo giorno del mese
+    fun getLastDayOfMonth(timestamp: Long): Long {
+        val calendar = Calendar.getInstance()
+        calendar.timeInMillis = timestamp
+        calendar.set(Calendar.DAY_OF_MONTH, calendar.getActualMaximum(Calendar.DAY_OF_MONTH))
+        return calendar.timeInMillis
+    }
     
     val isEditing = existingNota != null
     val isFormValid = nomeCognome.isNotBlank() && dataInizio != null && luogo.isNotBlank() && cliente.isNotBlank()
@@ -48,6 +57,12 @@ fun CreateNotaSpeseScreen(onNavigateBack: () -> Unit, onSave: (NotaSpese) -> Uni
                 Row(Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     OutlinedButton(onClick = onNavigateBack, modifier = Modifier.weight(1f)) { Text("Annulla") }
                     Button(onClick = { 
+                        // Calcola la data di compilazione come ultimo giorno del mese della data inizio
+                        val dataCompilazione = if (existingNota != null) {
+                            existingNota.dataCompilazione
+                        } else {
+                            getLastDayOfMonth(dataInizio!!)
+                        }
                         val nota = NotaSpese(
                             id = existingNota?.id ?: 0,
                             numeroNota = numeroNota,
@@ -60,12 +75,12 @@ fun CreateNotaSpeseScreen(onNavigateBack: () -> Unit, onSave: (NotaSpese) -> Uni
                             cliente = cliente, 
                             causale = causale, 
                             auto = auto, 
-                            dataCompilazione = existingNota?.dataCompilazione ?: System.currentTimeMillis(), 
+                            dataCompilazione = dataCompilazione, 
                             altriTrasfertisti = altriTrasfertisti, 
                             anticipo = anticipo.toDoubleOrNull() ?: 0.0,
                             kmPercorsi = kmPercorsi.toDoubleOrNull() ?: 0.0,
                             costoKmRimborso = costoKmRimborso.toDoubleOrNull() ?: 0.0,
-                            costoKmCliente = costoKmCliente.toDoubleOrNull() ?: 0.0
+                            costoKmCliente = costoKmCliente.toDoubleOrNull() ?: 0.60
                         )
                         onSave(nota) 
                     }, enabled = isFormValid, modifier = Modifier.weight(1f)) { Icon(Icons.Default.Save, null); Spacer(Modifier.width(8.dp)); Text("Salva") }
