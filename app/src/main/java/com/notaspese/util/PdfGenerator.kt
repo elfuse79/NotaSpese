@@ -156,18 +156,18 @@ object PdfGenerator {
             yPosition += 25f
             
             // Nome e Cognome
-            canvas.drawText("Nome e Cognome:", MARGIN, yPosition, normalPaint)
-            canvas.drawText(truncateText(nota.nomeCognome, 40), MARGIN + 150f, yPosition, accentPaint)
+            canvas.drawText("Nome:", MARGIN, yPosition, normalPaint)
+            canvas.drawText(truncateText(nota.nomeCognome, 35), MARGIN + 100f, yPosition, accentPaint)
             yPosition += LINE_HEIGHT
             
             // Cliente
             canvas.drawText("Cliente:", MARGIN, yPosition, normalPaint)
-            canvas.drawText(truncateText(nota.cliente, 45), MARGIN + 150f, yPosition, normalPaint)
+            canvas.drawText(truncateText(nota.cliente, 35), MARGIN + 100f, yPosition, normalPaint)
             yPosition += LINE_HEIGHT
             
             // Luogo
-            canvas.drawText("Luogo Trasferta:", MARGIN, yPosition, normalPaint)
-            canvas.drawText(truncateText(nota.luogoTrasferta, 45), MARGIN + 150f, yPosition, normalPaint)
+            canvas.drawText("Luogo:", MARGIN, yPosition, normalPaint)
+            canvas.drawText(truncateText(nota.luogoTrasferta, 35), MARGIN + 100f, yPosition, normalPaint)
             yPosition += LINE_HEIGHT
             
             // Date
@@ -175,7 +175,7 @@ object PdfGenerator {
                 " - ${dateFormatter.format(Date(nota.dataFineTrasferta))}"
             } else ""
             canvas.drawText("Periodo:", MARGIN, yPosition, normalPaint)
-            canvas.drawText("${dateFormatter.format(Date(nota.dataInizioTrasferta))}$dataFineStr", MARGIN + 150f, yPosition, normalPaint)
+            canvas.drawText("${dateFormatter.format(Date(nota.dataInizioTrasferta))}$dataFineStr", MARGIN + 100f, yPosition, normalPaint)
             yPosition += LINE_HEIGHT
             
             // Orari (se presenti)
@@ -183,28 +183,28 @@ object PdfGenerator {
                 val oraInizio = nota.oraInizioTrasferta.ifBlank { "--:--" }
                 val oraFine = nota.oraFineTrasferta.ifBlank { "--:--" }
                 canvas.drawText("Orario:", MARGIN, yPosition, normalPaint)
-                canvas.drawText("$oraInizio - $oraFine", MARGIN + 150f, yPosition, normalPaint)
+                canvas.drawText("$oraInizio - $oraFine", MARGIN + 100f, yPosition, normalPaint)
                 yPosition += LINE_HEIGHT
             }
             
             // Auto
             if (nota.auto.isNotBlank()) {
                 canvas.drawText("Auto:", MARGIN, yPosition, normalPaint)
-                canvas.drawText(truncateText(nota.auto, 45), MARGIN + 150f, yPosition, normalPaint)
+                canvas.drawText(truncateText(nota.auto, 35), MARGIN + 100f, yPosition, normalPaint)
                 yPosition += LINE_HEIGHT
             }
             
             // Causale
             if (nota.causale.isNotBlank()) {
                 canvas.drawText("Causale:", MARGIN, yPosition, normalPaint)
-                canvas.drawText(truncateText(nota.causale, 45), MARGIN + 150f, yPosition, normalPaint)
+                canvas.drawText(truncateText(nota.causale, 35), MARGIN + 100f, yPosition, normalPaint)
                 yPosition += LINE_HEIGHT
             }
             
             // Altri trasfertisti
             if (nota.altriTrasfertisti.isNotBlank()) {
-                canvas.drawText("Altri trasfertisti:", MARGIN, yPosition, normalPaint)
-                canvas.drawText(truncateText(nota.altriTrasfertisti, 40), MARGIN + 150f, yPosition, normalPaint)
+                canvas.drawText("Altri:", MARGIN, yPosition, normalPaint)
+                canvas.drawText(truncateText(nota.altriTrasfertisti, 35), MARGIN + 100f, yPosition, normalPaint)
                 yPosition += LINE_HEIGHT
             }
             
@@ -247,8 +247,8 @@ object PdfGenerator {
                     color = android.graphics.Color.parseColor("#1565C0")
                 }
                 
-                canvas.drawText("SPESE SOSTENUTE DALL'AZIENDA", leftColX, yPosition, headerPaint)
-                canvas.drawText("SPESE SOSTENUTE DAL DIPENDENTE", rightColX, yPosition, headerPaint)
+                canvas.drawText("SPESE AZIENDA", leftColX, yPosition, headerPaint)
+                canvas.drawText("SPESE DIPENDENTE", rightColX, yPosition, headerPaint)
                 yPosition += 20f
                 
                 // Headers tabelle
@@ -368,12 +368,12 @@ object PdfGenerator {
                     }
                     
                     val desc = spesa.descrizione.ifBlank { spesa.categoria.displayName }
-                    val truncatedDesc = truncateText(desc, 25)
+                    val truncatedDesc = truncateText(desc, 20)
                     
                     canvas.drawText(dateFormatter.format(Date(spesa.data)), MARGIN + 10f, yPosition, tableRowPaint)
                     canvas.drawText(truncatedDesc, MARGIN + 80f, yPosition, tableRowPaint)
-                    canvas.drawText(spesa.categoria.displayName, MARGIN + 250f, yPosition, tableRowPaint)
-                    canvas.drawText("€ ${String.format(Locale.ITALY, "%.2f", spesa.importo)}", PAGE_WIDTH - MARGIN - 70f, yPosition, tableRowPaint)
+                    canvas.drawText(truncateText(spesa.categoria.displayName, 12), MARGIN + 250f, yPosition, tableRowPaint)
+                    canvas.drawText("€${String.format(Locale.ITALY, "%.2f", spesa.importo)}", PAGE_WIDTH - MARGIN - 60f, yPosition, tableRowPaint)
                     
                     yPosition += 16f
                 }
@@ -413,7 +413,7 @@ object PdfGenerator {
             val rightX = MARGIN + halfWidth + MARGIN
             
             // Colonna sinistra: Riepilogo per categoria
-            canvas.drawText("RIEPILOGO PER CATEGORIA", leftX, yPosition, headerPaint)
+            canvas.drawText("RIEPILOGO CATEGORIA", leftX, yPosition, headerPaint)
             
             // Colonna destra: Spese sostenute da (solo se ci sono spese dipendente)
             if (haSpeseDipendente) {
@@ -421,26 +421,29 @@ object PdfGenerator {
             }
             yPosition += 20f
             
-            // Categorie
+            // Categorie (max 7 categorie)
             var catYPosition = yPosition
+            var catCount = 0
             for (categoria in CategoriaSpesa.entries) {
+                if (catCount >= 7) break  // Limita a 7 categorie
                 val totale = notaSpeseConSpese.totaleByCategoria(categoria)
                 if (totale > 0) {
-                    canvas.drawText(truncateText(categoria.displayName, 15), leftX + 10f, catYPosition, normalPaint)
-                    canvas.drawText("€ ${String.format(Locale.ITALY, "%.2f", totale)}", leftX + 150f, catYPosition, normalPaint)
+                    canvas.drawText(truncateText(categoria.displayName, 12), leftX + 10f, catYPosition, normalPaint)
+                    canvas.drawText("€${String.format(Locale.ITALY, "%.2f", totale)}", leftX + 120f, catYPosition, normalPaint)
                     catYPosition += LINE_HEIGHT
+                    catCount++
                 }
             }
             
             // Spese sostenute da (colonna destra) - solo se ci sono spese dipendente
             if (haSpeseDipendente) {
                 var sosYPosition = yPosition
-                canvas.drawText("Sostenute dall'Azienda", rightX + 10f, sosYPosition, normalPaint)
-                canvas.drawText("€ ${String.format(Locale.ITALY, "%.2f", notaSpeseConSpese.totalePagatoAzienda)}", rightX + 180f, sosYPosition, normalPaint)
+                canvas.drawText(truncateText("Azienda", 15), rightX + 10f, sosYPosition, normalPaint)
+                canvas.drawText("€${String.format(Locale.ITALY, "%.2f", notaSpeseConSpese.totalePagatoAzienda)}", rightX + 140f, sosYPosition, normalPaint)
                 sosYPosition += LINE_HEIGHT
                 
-                canvas.drawText("Sostenute dal Dipendente", rightX + 10f, sosYPosition, normalPaint)
-                canvas.drawText("€ ${String.format(Locale.ITALY, "%.2f", notaSpeseConSpese.totalePagatoDipendente)}", rightX + 180f, sosYPosition, normalPaint)
+                canvas.drawText(truncateText("Dipendente", 15), rightX + 10f, sosYPosition, normalPaint)
+                canvas.drawText("€${String.format(Locale.ITALY, "%.2f", notaSpeseConSpese.totalePagatoDipendente)}", rightX + 140f, sosYPosition, normalPaint)
                 sosYPosition += LINE_HEIGHT
                 
                 yPosition = maxOf(catYPosition, sosYPosition)
@@ -489,7 +492,7 @@ object PdfGenerator {
                 
                 if (nota.costoKmCliente > 0) {
                     canvas.drawText("Costo/km cliente:", MARGIN + 280f, yPosition + 10f, normalPaint)
-                    canvas.drawText("€ ${String.format(Locale.ITALY, "%.2f", nota.costoKmCliente)}", MARGIN + 420f, yPosition + 10f, normalPaint)
+                    canvas.drawText("€${String.format(Locale.ITALY, "%.2f", nota.costoKmCliente)}", MARGIN + 400f, yPosition + 10f, normalPaint)
                     
                     canvas.drawText("ADDEBITO CLIENTE:", MARGIN + 280f, yPosition + 28f, kmLabelPaint)
                     val addebitoClientePaint = Paint().apply {
@@ -497,15 +500,15 @@ object PdfGenerator {
                         typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
                         color = android.graphics.Color.parseColor("#1565C0")
                     }
-                    canvas.drawText("€ ${String.format(Locale.ITALY, "%.2f", nota.totaleCostoKmCliente)}", MARGIN + 420f, yPosition + 28f, addebitoClientePaint)
+                    canvas.drawText("€${String.format(Locale.ITALY, "%.2f", nota.totaleCostoKmCliente)}", MARGIN + 400f, yPosition + 28f, addebitoClientePaint)
                     
                     // Nota: addebito cliente non incide sul totale
-                    val notaPaint = Paint().apply {
-                        textSize = 8f
+                    val notaKmPaint = Paint().apply {
+                        textSize = 7f
                         typeface = Typeface.create(Typeface.DEFAULT, Typeface.ITALIC)
                         color = android.graphics.Color.GRAY
                     }
-                    canvas.drawText("(non incide sul costo complessivo)", MARGIN + 280f, yPosition + 46f, notaPaint)
+                    canvas.drawText("(no costo complessivo)", MARGIN + 280f, yPosition + 44f, notaKmPaint)
                 }
                 
                 yPosition += 90f
@@ -534,14 +537,14 @@ object PdfGenerator {
                 var rimborsoY = yPosition + 10f
                 
                 if (notaSpeseConSpese.totalePagatoDipendente > 0) {
-                    canvas.drawText("Spese pagate dal dipendente:", MARGIN + 20f, rimborsoY, normalPaint)
-                    canvas.drawText("+ € ${String.format(Locale.ITALY, "%.2f", notaSpeseConSpese.totalePagatoDipendente)}", MARGIN + 250f, rimborsoY, normalPaint)
+                    canvas.drawText("Spese dipendente:", MARGIN + 20f, rimborsoY, normalPaint)
+                    canvas.drawText("+€${String.format(Locale.ITALY, "%.2f", notaSpeseConSpese.totalePagatoDipendente)}", MARGIN + 180f, rimborsoY, normalPaint)
                     rimborsoY += 18f
                 }
                 
                 if (nota.totaleRimborsoKm > 0) {
-                    canvas.drawText("Rimborso chilometri:", MARGIN + 20f, rimborsoY, normalPaint)
-                    canvas.drawText("+ € ${String.format(Locale.ITALY, "%.2f", nota.totaleRimborsoKm)}", MARGIN + 250f, rimborsoY, normalPaint)
+                    canvas.drawText("Rimborso km:", MARGIN + 20f, rimborsoY, normalPaint)
+                    canvas.drawText("+€${String.format(Locale.ITALY, "%.2f", nota.totaleRimborsoKm)}", MARGIN + 180f, rimborsoY, normalPaint)
                     rimborsoY += 18f
                 }
                 
@@ -551,8 +554,8 @@ object PdfGenerator {
                         typeface = Typeface.DEFAULT
                         color = android.graphics.Color.parseColor("#C62828")
                     }
-                    canvas.drawText("Anticipo ricevuto:", MARGIN + 20f, rimborsoY, anticipoPaint)
-                    canvas.drawText("- € ${String.format(Locale.ITALY, "%.2f", nota.anticipo)}", MARGIN + 250f, rimborsoY, anticipoPaint)
+                    canvas.drawText("Anticipo:", MARGIN + 20f, rimborsoY, anticipoPaint)
+                    canvas.drawText("-€${String.format(Locale.ITALY, "%.2f", nota.anticipo)}", MARGIN + 180f, rimborsoY, anticipoPaint)
                     rimborsoY += 18f
                 }
                 
@@ -573,8 +576,8 @@ object PdfGenerator {
                     color = totaleRimborsoColore
                 }
                 
-                canvas.drawText("TOTALE RIMBORSO DIPENDENTE:", MARGIN + 20f, rimborsoY + 10f, rimborsoLabelPaint)
-                canvas.drawText("€ ${String.format(Locale.ITALY, "%.2f", notaSpeseConSpese.totaleRimborsoDipendente)}", MARGIN + 250f, rimborsoY + 10f, rimborsoTotalPaint)
+                canvas.drawText("TOTALE RIMBORSO:", MARGIN + 20f, rimborsoY + 10f, rimborsoLabelPaint)
+                canvas.drawText("€${String.format(Locale.ITALY, "%.2f", notaSpeseConSpese.totaleRimborsoDipendente)}", MARGIN + 180f, rimborsoY + 10f, rimborsoTotalPaint)
                 
                 yPosition += rimborsoBoxHeight + 25f
                 canvas.drawLine(MARGIN, yPosition, PAGE_WIDTH - MARGIN, yPosition, linePaint)
@@ -608,20 +611,20 @@ object PdfGenerator {
             var currentY = yPosition + 10f
             
             // Spese pagate dall'azienda
-            canvas.drawText("Spese pagate dall'Azienda:", MARGIN + 20f, currentY, normalPaint)
-            canvas.drawText("€ ${String.format(Locale.ITALY, "%.2f", notaSpeseConSpese.totalePagatoAzienda)}", MARGIN + 250f, currentY, normalPaint)
+            canvas.drawText("Spese Azienda:", MARGIN + 20f, currentY, normalPaint)
+            canvas.drawText("€${String.format(Locale.ITALY, "%.2f", notaSpeseConSpese.totalePagatoAzienda)}", MARGIN + 180f, currentY, normalPaint)
             currentY += 18f
             
             // Spese pagate dal dipendente (solo se presenti)
             if (haSpeseDipendente) {
-                canvas.drawText("Spese pagate dal Dipendente:", MARGIN + 20f, currentY, normalPaint)
-                canvas.drawText("€ ${String.format(Locale.ITALY, "%.2f", notaSpeseConSpese.totalePagatoDipendente)}", MARGIN + 250f, currentY, normalPaint)
+                canvas.drawText("Spese Dipendente:", MARGIN + 20f, currentY, normalPaint)
+                canvas.drawText("€${String.format(Locale.ITALY, "%.2f", notaSpeseConSpese.totalePagatoDipendente)}", MARGIN + 180f, currentY, normalPaint)
                 currentY += 18f
             }
             
             if (nota.totaleRimborsoKm > 0) {
                 canvas.drawText("Rimborso Km:", MARGIN + 20f, currentY, normalPaint)
-                canvas.drawText("€ ${String.format(Locale.ITALY, "%.2f", nota.totaleRimborsoKm)}", MARGIN + 250f, currentY, normalPaint)
+                canvas.drawText("€${String.format(Locale.ITALY, "%.2f", nota.totaleRimborsoKm)}", MARGIN + 180f, currentY, normalPaint)
                 currentY += 18f
             }
             
@@ -629,19 +632,19 @@ object PdfGenerator {
             
             // Costo complessivo
             val finalTotalPaint = Paint().apply {
-                textSize = 16f
+                textSize = 14f
                 typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
                 color = android.graphics.Color.parseColor("#1565C0")
             }
             
             val finalLabelPaint = Paint().apply {
-                textSize = 14f
+                textSize = 12f
                 typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
                 color = android.graphics.Color.BLACK
             }
             
             canvas.drawText("COSTO TOTALE:", MARGIN + 20f, currentY, finalLabelPaint)
-            canvas.drawText("€ ${String.format(Locale.ITALY, "%.2f", notaSpeseConSpese.costoComplessivoNotaSpese)}", MARGIN + 250f, currentY, finalTotalPaint)
+            canvas.drawText("€${String.format(Locale.ITALY, "%.2f", notaSpeseConSpese.costoComplessivoNotaSpese)}", MARGIN + 180f, currentY, finalTotalPaint)
             
             yPosition += boxHeight + 25f
             
@@ -679,8 +682,8 @@ object PdfGenerator {
             val speseConDescrizione = notaSpeseConSpese.spese.filter { it.descrizione.isNotBlank() }
             
             for (spesa in speseConDescrizione.take(4)) { // Max 4 descrizioni
-                val descText = "• ${truncateText(spesa.descrizione, 70)} (${spesa.categoria.displayName}, €${String.format(Locale.ITALY, "%.2f", spesa.importo)})"
-                canvas.drawText(descText, MARGIN + 10f, noteY, notePaint)
+                val descText = "• ${truncateText(spesa.descrizione, 50)} (${truncateText(spesa.categoria.displayName, 10)}, €${String.format(Locale.ITALY, "%.2f", spesa.importo)})"
+                canvas.drawText(truncateText(descText, 75), MARGIN + 10f, noteY, notePaint)
                 noteY += 16f
             }
             
@@ -827,8 +830,8 @@ object PdfGenerator {
                             }
                             
                             val desc = spesa.descrizione.ifBlank { spesa.categoria.displayName }
-                            val truncDesc = truncateText(desc, 25)
-                            val captionText = "${attachmentIndex + 1}. $truncDesc - €${String.format(Locale.ITALY, "%.2f", spesa.importo)}"
+                            val truncDesc = truncateText(desc, 20)
+                            val captionText = truncateText("${attachmentIndex + 1}. $truncDesc - €${String.format(Locale.ITALY, "%.2f", spesa.importo)}", 35)
                             canvas.drawText(captionText, x, y + imageHeight + 15f, captionPaint)
                             canvas.drawText(dateFormatter.format(Date(spesa.data)), x, y + imageHeight + 27f, captionPaint)
                             
