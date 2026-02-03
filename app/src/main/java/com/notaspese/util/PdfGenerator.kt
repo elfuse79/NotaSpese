@@ -12,6 +12,7 @@ import android.graphics.Typeface
 import android.graphics.pdf.PdfDocument
 import android.net.Uri
 import android.os.Environment
+import android.util.Log
 import androidx.core.content.FileProvider
 import androidx.exifinterface.media.ExifInterface
 import com.notaspese.data.model.APP_VERSION
@@ -46,11 +47,32 @@ object PdfGenerator {
         canvas.drawText("v$APP_VERSION - Pag. $pageNumber", PAGE_WIDTH - MARGIN, PAGE_HEIGHT - 20f, versionPaint)
     }
     
+    private const val TAG = "PdfGenerator"
+    
+    // Variabile per salvare l'ultimo errore per debug
+    var lastError: String? = null
+        private set
+    
     fun generatePdf(context: Context, notaSpeseConSpese: NotaSpeseConSpese): File? {
+        lastError = null
         return try {
+            Log.d(TAG, "=== INIZIO GENERAZIONE PDF ===")
             val dateFormatter = SimpleDateFormat("dd/MM/yyyy", Locale.ITALY)
-            val fileNameDateFormatter = SimpleDateFormat("yyyy-MM-dd", Locale.ITALY)
+            val fileNameDateFormatter = SimpleDateFormat("yyyy-MM-dd_HHmm", Locale.ITALY)
             val nota = notaSpeseConSpese.notaSpese
+            
+            // Log dei dati principali per debug
+            Log.d(TAG, "Nome: ${nota.nomeCognome}")
+            Log.d(TAG, "Cliente: ${nota.cliente}")
+            Log.d(TAG, "Luogo: ${nota.luogoTrasferta}")
+            Log.d(TAG, "Numero spese: ${notaSpeseConSpese.spese.size}")
+            Log.d(TAG, "Spese azienda: ${notaSpeseConSpese.speseAzienda.size}")
+            Log.d(TAG, "Spese dipendente: ${notaSpeseConSpese.speseDipendente.size}")
+            Log.d(TAG, "haSpeseDipendente: ${notaSpeseConSpese.haSpeseDipendente}")
+            Log.d(TAG, "haRimborsoDipendente: ${notaSpeseConSpese.haRimborsoDipendente}")
+            Log.d(TAG, "Km percorsi: ${nota.kmPercorsi}")
+            Log.d(TAG, "Totale rimborso km: ${nota.totaleRimborsoKm}")
+            Log.d(TAG, "Anticipo: ${nota.anticipo}")
             
             // Crea la struttura cartelle
             val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
@@ -846,17 +868,65 @@ object PdfGenerator {
             }
             
             // Save PDF
-            val pdfFileName = "NotaSpese_${nota.nomeCognome.replace(" ", "_")}.pdf"
+            Log.d(TAG, "Salvataggio PDF...")
+            val pdfFileName = "NotaSpese_${nota.nomeCognome.replace(" ", "_")}_${fileNameDateFormatter.format(Date(nota.dataInizioTrasferta))}.pdf"
             val pdfFile = File(notaDir, pdfFileName)
             FileOutputStream(pdfFile).use { out ->
                 document.writeTo(out)
             }
             document.close()
             
+            Log.d(TAG, "=== PDF GENERATO CON SUCCESSO ===")
             pdfFile
         } catch (e: Exception) {
+            val errorMsg = "ERRORE PDF: ${e.javaClass.simpleName} - ${e.message}\n${e.stackTraceToString()}"
+            Log.e(TAG, errorMsg)
+            lastError = errorMsg
             e.printStackTrace()
             null
+        }
+    }
+    
+    // Funzione per ottenere info debug sulla nota spese
+    fun getDebugInfo(notaSpeseConSpese: NotaSpeseConSpese): String {
+        val nota = notaSpeseConSpese.notaSpese
+        return buildString {
+            appendLine("=== DEBUG INFO ===")
+            appendLine("Nome: '${nota.nomeCognome}' (len: ${nota.nomeCognome.length})")
+            appendLine("Cliente: '${nota.cliente}' (len: ${nota.cliente.length})")
+            appendLine("Luogo: '${nota.luogoTrasferta}' (len: ${nota.luogoTrasferta.length})")
+            appendLine("Auto: '${nota.auto}' (len: ${nota.auto.length})")
+            appendLine("Causale: '${nota.causale}' (len: ${nota.causale.length})")
+            appendLine("Altri: '${nota.altriTrasfertisti}' (len: ${nota.altriTrasfertisti.length})")
+            appendLine("NumeroNota: '${nota.numeroNota}'")
+            appendLine("---")
+            appendLine("Km: ${nota.kmPercorsi}")
+            appendLine("CostoKmRimborso: ${nota.costoKmRimborso}")
+            appendLine("CostoKmCliente: ${nota.costoKmCliente}")
+            appendLine("TotaleRimborsoKm: ${nota.totaleRimborsoKm}")
+            appendLine("TotaleCostoKmCliente: ${nota.totaleCostoKmCliente}")
+            appendLine("Anticipo: ${nota.anticipo}")
+            appendLine("---")
+            appendLine("Num spese totali: ${notaSpeseConSpese.spese.size}")
+            appendLine("Num spese azienda: ${notaSpeseConSpese.speseAzienda.size}")
+            appendLine("Num spese dipendente: ${notaSpeseConSpese.speseDipendente.size}")
+            appendLine("haSpeseDipendente: ${notaSpeseConSpese.haSpeseDipendente}")
+            appendLine("haRimborsoDipendente: ${notaSpeseConSpese.haRimborsoDipendente}")
+            appendLine("---")
+            appendLine("TotalePagatoAzienda: ${notaSpeseConSpese.totalePagatoAzienda}")
+            appendLine("TotalePagatoDipendente: ${notaSpeseConSpese.totalePagatoDipendente}")
+            appendLine("TotalePagatoDipendenteConKm: ${notaSpeseConSpese.totalePagatoDipendenteConKm}")
+            appendLine("TotaleRimborsoDipendente: ${notaSpeseConSpese.totaleRimborsoDipendente}")
+            appendLine("CostoComplessivoNotaSpese: ${notaSpeseConSpese.costoComplessivoNotaSpese}")
+            appendLine("---")
+            notaSpeseConSpese.spese.forEachIndexed { idx, spesa ->
+                appendLine("Spesa $idx: desc='${spesa.descrizione}' (len:${spesa.descrizione.length}), cat=${spesa.categoria}, importo=${spesa.importo}, pagatoDa=${spesa.pagatoDa}")
+            }
+            if (lastError != null) {
+                appendLine("---")
+                appendLine("ULTIMO ERRORE:")
+                appendLine(lastError)
+            }
         }
     }
     
@@ -871,7 +941,7 @@ object PdfGenerator {
     }
     
     fun getNotaFolder(notaSpeseConSpese: NotaSpeseConSpese): File {
-        val dateFormatter = SimpleDateFormat("yyyy-MM-dd", Locale.ITALY)
+        val dateFormatter = SimpleDateFormat("yyyy-MM-dd_HHmm", Locale.ITALY)
         val nota = notaSpeseConSpese.notaSpese
         val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
         val innovolDir = File(downloadsDir, "Innoval Nota Spese")

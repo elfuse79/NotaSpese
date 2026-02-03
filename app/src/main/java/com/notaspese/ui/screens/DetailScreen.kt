@@ -6,8 +6,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -40,6 +42,8 @@ fun DetailScreen(notaSpeseConSpese: NotaSpeseConSpese?, onNavigateBack: () -> Un
     var isGeneratingPdf by remember { mutableStateOf(false) }
     var generatedPdfFile by remember { mutableStateOf<java.io.File?>(null) }
     var showPdfDialog by remember { mutableStateOf(false) }
+    var showDebugDialog by remember { mutableStateOf(false) }
+    var debugInfo by remember { mutableStateOf("") }
     
     if (notaSpeseConSpese == null) { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }; return }
     
@@ -395,7 +399,9 @@ fun DetailScreen(notaSpeseConSpese: NotaSpeseConSpese?, onNavigateBack: () -> Un
                             generatedPdfFile = pdfFile
                             showPdfDialog = true
                         } else {
-                            Toast.makeText(context, "Errore nella generazione", Toast.LENGTH_SHORT).show()
+                            // Mostra debug info per capire l'errore
+                            debugInfo = PdfGenerator.getDebugInfo(notaSpeseConSpese)
+                            showDebugDialog = true
                         }
                     }
                 )
@@ -522,6 +528,50 @@ fun DetailScreen(notaSpeseConSpese: NotaSpeseConSpese?, onNavigateBack: () -> Un
             dismissButton = {
                 TextButton(onClick = { showPdfDialog = false }) {
                     Text("Chiudi")
+                }
+            }
+        )
+    }
+    
+    // Debug dialog per errori PDF
+    if (showDebugDialog) {
+        AlertDialog(
+            onDismissRequest = { showDebugDialog = false },
+            icon = { Icon(Icons.Default.Warning, null, tint = MaterialTheme.colorScheme.error) },
+            title = { Text("Errore Generazione PDF") },
+            text = { 
+                Column(
+                    Modifier
+                        .heightIn(max = 400.dp)
+                        .verticalScroll(rememberScrollState())
+                ) {
+                    Text(
+                        "Si è verificato un errore. Ecco i dati di debug:",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        debugInfo,
+                        style = MaterialTheme.typography.bodySmall,
+                        fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+                    )
+                }
+            },
+            confirmButton = {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    // Copia negli appunti
+                    TextButton(onClick = {
+                        val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                        val clip = android.content.ClipData.newPlainText("Debug Info", debugInfo)
+                        clipboard.setPrimaryClip(clip)
+                        Toast.makeText(context, "Debug info copiato negli appunti", Toast.LENGTH_SHORT).show()
+                    }) {
+                        Text("Copia")
+                    }
+                    Button(onClick = { showDebugDialog = false }) {
+                        Text("Chiudi")
+                    }
                 }
             }
         )

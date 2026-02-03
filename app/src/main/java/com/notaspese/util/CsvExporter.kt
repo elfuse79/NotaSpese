@@ -20,7 +20,7 @@ object CsvExporter {
     fun exportToCsv(context: Context, notaSpeseConSpese: NotaSpeseConSpese): File? {
         return try {
             val dateFormatter = SimpleDateFormat("dd/MM/yyyy", Locale.ITALY)
-            val fileNameDateFormatter = SimpleDateFormat("yyyy-MM-dd", Locale.ITALY)
+            val fileNameDateFormatter = SimpleDateFormat("yyyy-MM-dd_HHmm", Locale.ITALY)
             val nota = notaSpeseConSpese.notaSpese
             
             // Crea la struttura cartelle: Download/Innoval Nota Spese/[Nome Nota Spese]
@@ -235,7 +235,7 @@ object CsvExporter {
     }
     
     fun getExportFolderPath(notaSpeseConSpese: NotaSpeseConSpese): String {
-        val dateFormatter = SimpleDateFormat("yyyy-MM-dd", Locale.ITALY)
+        val dateFormatter = SimpleDateFormat("yyyy-MM-dd_HHmm", Locale.ITALY)
         val nota = notaSpeseConSpese.notaSpese
         val folderName = "${nota.nomeCognome.replace(" ", "_")}_${dateFormatter.format(Date(nota.dataInizioTrasferta))}"
         return "Download/Innoval Nota Spese/$folderName"
