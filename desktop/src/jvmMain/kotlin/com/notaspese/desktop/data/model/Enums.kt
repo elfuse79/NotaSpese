@@ -1,6 +1,5 @@
-package com.notaspese.data.model
+package com.notaspese.desktop.data.model
 
-// Versione software dell'applicazione
 const val APP_VERSION = "1.3.2"
 
 enum class MetodoPagamento(val displayName: String) {

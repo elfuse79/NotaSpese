@@ -1,4 +1,4 @@
-﻿plugins {
+plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("com.google.devtools.ksp")
@@ -12,8 +12,8 @@ android {
         applicationId = "com.notaspese"
         minSdk = 31
         targetSdk = 34
-        versionCode = 5
-        versionName = "1.0.5"
+        versionCode = 10
+        versionName = "1.3.2"
         vectorDrawables { useSupportLibrary = true }
     }
 
@@ -67,6 +67,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
     debugImplementation("androidx.compose.ui:ui-tooling")
     
+    implementation("com.google.code.gson:gson:2.10.1")
     // ML Kit Text Recognition per OCR scontrini
     implementation("com.google.mlkit:text-recognition:16.0.0")
     

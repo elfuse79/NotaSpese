@@ -58,6 +58,48 @@ object FileStorageHelper {
     fun saveCroppedImageToNotaFolder(context: Context, sourceUri: Uri, notaSpeseId: Long): String? {
         return saveFileToNotaFolder(context, sourceUri, notaSpeseId, "image")
     }
+
+    /**
+     * Copia un file da path assoluto nella cartella della nota spese (per import da .notaspese).
+     */
+    fun saveFileFromPath(context: Context, sourcePath: String, notaSpeseId: Long, preferredExtension: String? = null): String? {
+        return try {
+            val sourceFile = File(sourcePath)
+            if (!sourceFile.exists()) return null
+            val notaFolder = getNotaFolder(context, notaSpeseId)
+            if (!notaFolder.exists()) notaFolder.mkdirs()
+            val ext = preferredExtension ?: sourceFile.extension.ifBlank { "jpg" }
+            val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+            val destFile = File(notaFolder, "import_${timeStamp}_${System.nanoTime()}.$ext")
+            sourceFile.copyTo(destFile, overwrite = true)
+            destFile.absolutePath
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
+    /**
+     * Salva un file da URI nella cartella della nota spese (per import).
+     */
+    fun saveFileFromUri(context: Context, sourceUri: Uri, notaSpeseId: Long, preferredExtension: String? = null): String? {
+        return try {
+            val notaFolder = getNotaFolder(context, notaSpeseId)
+            if (!notaFolder.exists()) notaFolder.mkdirs()
+            val ext = preferredExtension ?: "jpg"
+            val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+            val destFile = File(notaFolder, "import_${timeStamp}_${System.nanoTime()}.$ext")
+            context.contentResolver.openInputStream(sourceUri)?.use { input ->
+                FileOutputStream(destFile).use { output ->
+                    input.copyTo(output)
+                }
+            }
+            destFile.absolutePath
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
     
     /**
      * Ottiene la cartella per una specifica nota spese

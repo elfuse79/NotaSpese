@@ -192,22 +192,15 @@ object PdfGenerator {
             canvas.drawText(truncateText(nota.luogoTrasferta, 35), MARGIN + 100f, yPosition, normalPaint)
             yPosition += LINE_HEIGHT
             
-            // Date
-            val dataFineStr = if (nota.dataFineTrasferta != nota.dataInizioTrasferta) {
-                " - ${dateFormatter.format(Date(nota.dataFineTrasferta))}"
-            } else ""
+            // Periodo: Inizio: gg/mm/aaaa hh:mm Fine: gg/mm/aaaa hh:mm
+            val oraInizio = nota.oraInizioTrasferta.ifBlank { "--:--" }
+            val oraFine = nota.oraFineTrasferta.ifBlank { "--:--" }
+            val inizioStr = "${dateFormatter.format(Date(nota.dataInizioTrasferta))} $oraInizio"
+            val fineStr = "${dateFormatter.format(Date(nota.dataFineTrasferta))} $oraFine"
+            val periodoStr = "Inizio: $inizioStr Fine: $fineStr"
             canvas.drawText("Periodo:", MARGIN, yPosition, normalPaint)
-            canvas.drawText("${dateFormatter.format(Date(nota.dataInizioTrasferta))}$dataFineStr", MARGIN + 100f, yPosition, normalPaint)
+            canvas.drawText(truncateText(periodoStr, 55), MARGIN + 100f, yPosition, normalPaint)
             yPosition += LINE_HEIGHT
-            
-            // Orari (se presenti)
-            if (nota.oraInizioTrasferta.isNotBlank() || nota.oraFineTrasferta.isNotBlank()) {
-                val oraInizio = nota.oraInizioTrasferta.ifBlank { "--:--" }
-                val oraFine = nota.oraFineTrasferta.ifBlank { "--:--" }
-                canvas.drawText("Orario:", MARGIN, yPosition, normalPaint)
-                canvas.drawText("$oraInizio - $oraFine", MARGIN + 100f, yPosition, normalPaint)
-                yPosition += LINE_HEIGHT
-            }
             
             // Auto
             if (nota.auto.isNotBlank()) {
@@ -613,12 +606,6 @@ object PdfGenerator {
                 color = android.graphics.Color.parseColor("#E3F2FD")
             }
             
-            val totalLabelPaint = Paint().apply {
-                textSize = 12f
-                typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-                color = android.graphics.Color.BLACK
-            }
-            
             canvas.drawText("COSTO COMPLESSIVO NOTA SPESE", MARGIN, yPosition, headerPaint)
             yPosition += 20f
             
@@ -996,7 +983,8 @@ object PdfGenerator {
         }
     }
     
-    private fun loadBitmapFromFile(context: Context, file: File, targetWidth: Int, targetHeight: Int): Bitmap? {
+    @Suppress("UNUSED_PARAMETER")
+    private fun loadBitmapFromFile(_context: Context, file: File, targetWidth: Int, targetHeight: Int): Bitmap? {
         if (!file.exists()) return null
         
         return try {

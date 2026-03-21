@@ -1,4 +1,4 @@
-﻿package com.notaspese.ui.screens
+package com.notaspese.ui.screens
 
 import android.Manifest
 import android.net.Uri
@@ -41,24 +41,30 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddSpesaScreen(notaSpeseId: Long, onNavigateBack: () -> Unit, onSave: (Spesa) -> Unit) {
+fun AddSpesaScreen(
+    notaSpeseId: Long, 
+    onNavigateBack: () -> Unit, 
+    onSave: (Spesa) -> Unit,
+    existingSpesa: Spesa? = null
+) {
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    var descrizione by remember { mutableStateOf("") }
-    var importo by remember { mutableStateOf("") }
-    var data by remember { mutableStateOf<Long?>(System.currentTimeMillis()) }
-    var metodoPagamento by remember { mutableStateOf(MetodoPagamento.CARTA_CREDITO) }
-    var categoria by remember { mutableStateOf(CategoriaSpesa.VITTO) }
-    var fotoPath by remember { mutableStateOf<String?>(null) }
+    val isEditMode = existingSpesa != null
+    
+    var descrizione by remember { mutableStateOf(existingSpesa?.descrizione ?: "") }
+    var importo by remember { mutableStateOf(if (existingSpesa != null) "%.2f".format(existingSpesa.importo) else "") }
+    var data by remember { mutableStateOf<Long?>(existingSpesa?.data ?: System.currentTimeMillis()) }
+    var metodoPagamento by remember { mutableStateOf(existingSpesa?.metodoPagamento ?: MetodoPagamento.CARTA_CREDITO) }
+    var categoria by remember { mutableStateOf(existingSpesa?.categoria ?: CategoriaSpesa.VITTO) }
+    var fotoPath by remember { mutableStateOf<String?>(existingSpesa?.fotoScontrinoPath) }
     var tempPhotoUri by remember { mutableStateOf<Uri?>(null) }
     var showPhotoOptions by remember { mutableStateOf(false) }
     var showCropDialog by remember { mutableStateOf(false) }
     var pendingImageUri by remember { mutableStateOf<Uri?>(null) }
-    var isOcrProcessing by remember { mutableStateOf(false) }
+    
     var ocrResultMessage by remember { mutableStateOf<String?>(null) }
-    var pdfPath by remember { mutableStateOf<String?>(null) }
-    var isPdf by remember { mutableStateOf(false) }
-    var pagatoDa by remember { mutableStateOf(PagatoDa.AZIENDA) }
+    var pdfPath by remember { mutableStateOf<String?>(existingSpesa?.fotoScontrinoPath?.takeIf { it.endsWith(".pdf", true) }) }
+    var isPdf by remember { mutableStateOf(existingSpesa?.fotoScontrinoPath?.endsWith(".pdf", true) == true) }
+    var pagatoDa by remember { mutableStateOf(existingSpesa?.pagatoDa ?: PagatoDa.AZIENDA) }
     
     // Se pagato dal dipendente, forza metodo pagamento a Pagamento Elettronico (CONTANTI nel enum)
     LaunchedEffect(pagatoDa) {
@@ -78,7 +84,7 @@ fun AddSpesaScreen(notaSpeseId: Long, onNavigateBack: () -> Unit, onSave: (Spesa
             val savedPath = FileStorageHelper.saveFileToNotaFolder(context, it, notaSpeseId, "pdf")
             if (savedPath != null) {
                 pdfPath = savedPath
-                fotoPath = savedPath  // Usiamo lo stesso campo per semplicità
+                fotoPath = savedPath  // Usiamo lo stesso campo per semplicit?
                 isPdf = true
                 ocrResultMessage = "PDF caricato correttamente"
             } else {
@@ -112,8 +118,8 @@ fun AddSpesaScreen(notaSpeseId: Long, onNavigateBack: () -> Unit, onSave: (Spesa
     }
     
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Nuova Spesa", fontWeight = FontWeight.SemiBold) }, navigationIcon = { IconButton(onClick = onNavigateBack) { Icon(Icons.Default.ArrowBack, "Indietro") } }) },
-        bottomBar = { Surface(tonalElevation = 3.dp) { Row(Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) { OutlinedButton(onClick = onNavigateBack, modifier = Modifier.weight(1f)) { Text("Annulla") }; Button(onClick = { onSave(Spesa(notaSpeseId = notaSpeseId, descrizione = descrizione, importo = importo.toDouble(), data = data!!, metodoPagamento = metodoPagamento, categoria = categoria, fotoScontrinoPath = fotoPath, pagatoDa = pagatoDa)) }, enabled = isFormValid, modifier = Modifier.weight(1f)) { Icon(Icons.Default.Save, null); Spacer(Modifier.width(8.dp)); Text("Salva") } } } }
+        topBar = { TopAppBar(title = { Text(if (isEditMode) "Modifica Spesa" else "Nuova Spesa", fontWeight = FontWeight.SemiBold) }, navigationIcon = { IconButton(onClick = onNavigateBack) { Icon(Icons.Default.ArrowBack, "Indietro") } }) },
+        bottomBar = { Surface(tonalElevation = 3.dp) { Row(Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) { OutlinedButton(onClick = onNavigateBack, modifier = Modifier.weight(1f)) { Text("Annulla") }; Button(onClick = { onSave(Spesa(id = existingSpesa?.id ?: 0, notaSpeseId = notaSpeseId, descrizione = descrizione, importo = importo.toDouble(), data = data!!, metodoPagamento = metodoPagamento, categoria = categoria, fotoScontrinoPath = fotoPath, pagatoDa = pagatoDa)) }, enabled = isFormValid, modifier = Modifier.weight(1f)) { Icon(Icons.Default.Save, null); Spacer(Modifier.width(8.dp)); Text("Salva") } } } }
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
             // Banner OCR result
@@ -281,7 +287,7 @@ fun AddSpesaScreen(notaSpeseId: Long, onNavigateBack: () -> Unit, onSave: (Spesa
                 // Se l'OCR ha trovato un totale, lo inserisce nel campo importo
                 if (extractedTotal != null && extractedTotal > 0) {
                     importo = String.format(java.util.Locale.US, "%.2f", extractedTotal)
-                    ocrResultMessage = "Totale rilevato: €${String.format("%.2f", extractedTotal)}"
+                    ocrResultMessage = "Totale rilevato: ?${String.format("%.2f", extractedTotal)}"
                 } else {
                     ocrResultMessage = "Totale non rilevato. Inseriscilo manualmente."
                 }

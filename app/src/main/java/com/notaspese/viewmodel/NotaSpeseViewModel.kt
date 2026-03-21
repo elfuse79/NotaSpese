@@ -1,4 +1,4 @@
-﻿package com.notaspese.viewmodel
+package com.notaspese.viewmodel
 
 import android.app.Application
 import android.os.Environment
@@ -9,6 +9,9 @@ import com.notaspese.data.model.NotaSpese
 import com.notaspese.data.model.NotaSpeseConSpese
 import com.notaspese.data.model.Spesa
 import com.notaspese.data.repository.NotaSpeseRepository
+import com.notaspese.util.CsvImporter
+import com.notaspese.util.FileStorageHelper
+import com.notaspese.util.NotaSpeseImporter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -76,5 +79,43 @@ class NotaSpeseViewModel(application: Application) : AndroidViewModel(applicatio
     fun deleteSpesa(spesa: Spesa) { viewModelScope.launch { repository.deleteSpesa(spesa) } }
     fun updateAnticipo(notaSpeseId: Long, anticipo: Double) {
         viewModelScope.launch { repository.getNotaSpeseById(notaSpeseId)?.let { repository.updateNotaSpese(it.copy(anticipo = anticipo)) } }
+    }
+
+    suspend fun importFromCsv(csvUri: android.net.Uri): NotaSpeseConSpese? = withContext(Dispatchers.IO) {
+        CsvImporter.importFromCsv(getApplication(), csvUri)
+    }
+
+    suspend fun importFromNotaSpeseUri(uri: android.net.Uri): NotaSpeseConSpese? = withContext(Dispatchers.IO) {
+        NotaSpeseImporter.importFromUri(getApplication(), uri)
+    }
+
+    fun importAndSave(notaSpeseConSpese: NotaSpeseConSpese, attachmentUris: Map<String, android.net.Uri> = emptyMap()) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            withContext(Dispatchers.IO) {
+                val nota = notaSpeseConSpese.notaSpese
+                val id = repository.insertNotaSpese(nota)
+                val ctx = getApplication<android.app.Application>()
+                for (spesa in notaSpeseConSpese.spese) {
+                    var photoPath: String? = null
+                    spesa.fotoScontrinoPath?.let { path ->
+                        photoPath = when {
+                            path.startsWith("content://") -> attachmentUris[path]?.let { uri ->
+                                val ext = if (path.contains('.')) path.substringAfterLast('.') else "jpg"
+                                FileStorageHelper.saveFileFromUri(ctx, uri, id, ext)
+                            }
+                            path.startsWith("file://") || path.contains('/') ->
+                                FileStorageHelper.saveFileFromPath(ctx, path, id)
+                            else -> attachmentUris[path]?.let { uri ->
+                                val ext = if (path.contains('.')) path.substringAfterLast('.') else "jpg"
+                                FileStorageHelper.saveFileFromUri(ctx, uri, id, ext)
+                            }
+                        }
+                    }
+                    repository.insertSpesa(spesa.copy(notaSpeseId = id, fotoScontrinoPath = photoPath))
+                }
+            }
+            _isLoading.value = false
+        }
     }
 }

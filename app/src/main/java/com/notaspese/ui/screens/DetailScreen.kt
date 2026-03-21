@@ -1,4 +1,4 @@
-﻿package com.notaspese.ui.screens
+package com.notaspese.ui.screens
 
 import android.widget.Toast
 import androidx.compose.foundation.background
@@ -27,13 +27,14 @@ import com.notaspese.ui.components.getCategoriaColor
 import com.notaspese.ui.theme.*
 import com.notaspese.data.model.APP_VERSION
 import com.notaspese.util.CsvExporter
+import com.notaspese.util.NotaSpeseExporter
 import com.notaspese.util.PdfGenerator
 import java.text.SimpleDateFormat
 import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DetailScreen(notaSpeseConSpese: NotaSpeseConSpese?, onNavigateBack: () -> Unit, onAddSpesa: () -> Unit, onDeleteSpesa: (Spesa) -> Unit, onEditAnticipo: (Double) -> Unit, onEditNota: () -> Unit) {
+fun DetailScreen(notaSpeseConSpese: NotaSpeseConSpese?, onNavigateBack: () -> Unit, onAddSpesa: () -> Unit, onEditSpesa: (Spesa) -> Unit, onDeleteSpesa: (Spesa) -> Unit, onEditAnticipo: (Double) -> Unit, onEditNota: () -> Unit) {
     val context = LocalContext.current
     val dateFormatter = SimpleDateFormat("dd/MM/yyyy", Locale.ITALY)
     var showAnticipoDialog by remember { mutableStateOf(false) }
@@ -48,7 +49,7 @@ fun DetailScreen(notaSpeseConSpese: NotaSpeseConSpese?, onNavigateBack: () -> Un
     if (notaSpeseConSpese == null) { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }; return }
     
     val nota = notaSpeseConSpese.notaSpese
-    val numFoto = notaSpeseConSpese.spese.count { it.fotoScontrinoPath != null }
+
     
     Scaffold(
         topBar = {
@@ -123,14 +124,14 @@ fun DetailScreen(notaSpeseConSpese: NotaSpeseConSpese?, onNavigateBack: () -> Un
                                 // Costo al km rimborso
                                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                                     Text("Costo/km rimborso:", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f))
-                                    Text("€ %.2f".format(nota.costoKmRimborso), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f))
+                                    Text("? %.2f".format(nota.costoKmRimborso), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f))
                                 }
                                 Spacer(Modifier.height(4.dp))
                                 
                                 // Totale rimborso trasfertista
                                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                                     Text("Rimborso Trasfertista:", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSecondaryContainer)
-                                    Text("€ %.2f".format(nota.totaleRimborsoKm), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = ColorContanti)
+                                    Text("? %.2f".format(nota.totaleRimborsoKm), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = ColorContanti)
                                 }
                             }
                             
@@ -142,14 +143,14 @@ fun DetailScreen(notaSpeseConSpese: NotaSpeseConSpese?, onNavigateBack: () -> Un
                                 // Costo al km cliente
                                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                                     Text("Costo/km cliente:", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f))
-                                    Text("€ %.2f".format(nota.costoKmCliente), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f))
+                                    Text("? %.2f".format(nota.costoKmCliente), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f))
                                 }
                                 Spacer(Modifier.height(4.dp))
                                 
                                 // Totale addebito cliente
                                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                                     Text("Addebito Cliente:", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSecondaryContainer)
-                                    Text("€ %.2f".format(nota.totaleCostoKmCliente), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = ColorCarta)
+                                    Text("? %.2f".format(nota.totaleCostoKmCliente), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = ColorCarta)
                                 }
                             }
                         }
@@ -175,7 +176,7 @@ fun DetailScreen(notaSpeseConSpese: NotaSpeseConSpese?, onNavigateBack: () -> Un
                                                 Spacer(Modifier.width(8.dp))
                                                 Text(cat.displayName, style = MaterialTheme.typography.bodySmall) 
                                             }
-                                            Text("€%.2f".format(tot), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium) 
+                                            Text("?%.2f".format(tot), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium) 
                                         } 
                                     }
                                 }
@@ -190,7 +191,7 @@ fun DetailScreen(notaSpeseConSpese: NotaSpeseConSpese?, onNavigateBack: () -> Un
                                         Spacer(Modifier.width(4.dp))
                                         Text("Azienda", style = MaterialTheme.typography.bodySmall)
                                     }
-                                    Text("€%.2f".format(notaSpeseConSpese.totalePagatoAzienda), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold, color = ColorCarta) 
+                                    Text("?%.2f".format(notaSpeseConSpese.totalePagatoAzienda), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold, color = ColorCarta) 
                                 }
                                 if (notaSpeseConSpese.totalePagatoDipendente > 0) {
                                     Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) { 
@@ -199,7 +200,7 @@ fun DetailScreen(notaSpeseConSpese: NotaSpeseConSpese?, onNavigateBack: () -> Un
                                             Spacer(Modifier.width(4.dp))
                                             Text("Dipendente", style = MaterialTheme.typography.bodySmall)
                                         }
-                                        Text("€%.2f".format(notaSpeseConSpese.totalePagatoDipendente), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold, color = ColorContanti) 
+                                        Text("?%.2f".format(notaSpeseConSpese.totalePagatoDipendente), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold, color = ColorContanti) 
                                     }
                                 }
                             }
@@ -345,6 +346,7 @@ fun DetailScreen(notaSpeseConSpese: NotaSpeseConSpese?, onNavigateBack: () -> Un
                             }
                             Text("EUR %.2f".format(spesa.importo), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                             Spacer(Modifier.width(8.dp))
+                            IconButton(onClick = { onEditSpesa(spesa) }) { Icon(Icons.Default.Edit, "Modifica", modifier = Modifier.size(20.dp)) }
                             IconButton(onClick = { showDeleteDialog = spesa }) { Icon(Icons.Default.Delete, "Elimina", tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f), modifier = Modifier.size(20.dp)) }
                         }
                     }
@@ -390,8 +392,9 @@ fun DetailScreen(notaSpeseConSpese: NotaSpeseConSpese?, onNavigateBack: () -> Un
                         // Genera PDF
                         val pdfFile = PdfGenerator.generatePdf(context, notaSpeseConSpese)
                         
-                        // Esporta anche CSV + allegati nella stessa cartella
-                        CsvExporter.exportToCsv(context, notaSpeseConSpese)
+                        // Esporta anche CSV + .notaspese + allegati nella stessa cartella
+                        val folder = CsvExporter.exportToCsv(context, notaSpeseConSpese)
+                        folder?.let { NotaSpeseExporter.exportToNotaSpeseFile(context, notaSpeseConSpese, it) }
                         
                         isGeneratingPdf = false
                         
@@ -422,6 +425,7 @@ fun DetailScreen(notaSpeseConSpese: NotaSpeseConSpese?, onNavigateBack: () -> Un
                     modifier = Modifier.clickable {
                         showExportOptions = false
                         val folder = CsvExporter.exportToCsv(context, notaSpeseConSpese)
+                        folder?.let { NotaSpeseExporter.exportToNotaSpeseFile(context, notaSpeseConSpese, it) }
                         if (folder != null) {
                             val path = CsvExporter.getExportFolderPath(notaSpeseConSpese)
                             val numAllegati = notaSpeseConSpese.spese.count { it.fotoScontrinoPath != null }
@@ -546,7 +550,7 @@ fun DetailScreen(notaSpeseConSpese: NotaSpeseConSpese?, onNavigateBack: () -> Un
                         .verticalScroll(rememberScrollState())
                 ) {
                     Text(
-                        "Si è verificato un errore. Ecco i dati di debug:",
+                        "Si ? verificato un errore. Ecco i dati di debug:",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.error
                     )

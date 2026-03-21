@@ -1,0 +1,247 @@
+package com.notaspese.desktop.ui.screens
+
+import androidx.compose.foundation.VerticalScrollbar
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollbarAdapter
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import com.notaspese.desktop.data.model.APP_VERSION
+import com.notaspese.desktop.data.model.NotaSpeseConSpese
+import java.awt.dnd.DropTarget
+import java.awt.dnd.DropTargetAdapter
+import java.awt.dnd.DropTargetDropEvent
+import java.awt.datatransfer.DataFlavor
+import java.awt.Toolkit
+import java.io.File
+import java.text.SimpleDateFormat
+import java.util.*
+import javax.swing.JFileChooser
+import javax.swing.filechooser.FileSystemView
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun HomeScreen(
+    noteSpese: List<NotaSpeseConSpese>,
+    onNavigateToCreate: () -> Unit,
+    onNavigateToDetail: (Long) -> Unit,
+    onDeleteNota: (NotaSpeseConSpese) -> Unit,
+    onImportFromFolder: (File) -> Unit,
+    onImportFromNotaSpeseFile: (File) -> Unit,
+    onImportFromPath: (String) -> Unit
+) {
+    val dateFormatter = remember { SimpleDateFormat("dd/MM/yyyy", Locale.ITALY) }
+    var showDeleteDialog by remember { mutableStateOf<NotaSpeseConSpese?>(null) }
+    var pathInput by remember { mutableStateOf("") }
+    var showPathField by remember { mutableStateOf(false) }
+    val listState = rememberLazyListState()
+
+    // Drag and drop: aggiungi DropTarget alla finestra
+    DisposableEffect(onImportFromFolder, onImportFromNotaSpeseFile) {
+        val dt = object : DropTargetAdapter() {
+            override fun drop(e: DropTargetDropEvent) {
+                if (!e.isDataFlavorSupported(DataFlavor.javaFileListFlavor)) return
+                e.acceptDrop(e.dropAction)
+                try {
+                    @Suppress("UNCHECKED_CAST")
+                    val files = e.transferable.getTransferData(DataFlavor.javaFileListFlavor) as List<File>
+                    val f = files.firstOrNull() ?: run { e.dropComplete(false); return }
+                    when {
+                        f.isDirectory -> onImportFromFolder(f)
+                        f.name.endsWith(".notaspese", true) -> onImportFromNotaSpeseFile(f)
+                        f.extension.equals("csv", true) -> onImportFromFolder(f.parentFile ?: f)
+                        else -> onImportFromFolder(f.parentFile ?: f)
+                    }
+                    e.dropComplete(true)
+                } catch (_: Exception) { e.dropComplete(false) }
+            }
+        }
+        var oldDropTarget: java.awt.dnd.DropTarget? = null
+        val frame = java.awt.Frame.getFrames().lastOrNull { it.isShowing && it.title.contains("NotaSpese") }
+        frame?.let {
+            oldDropTarget = it.dropTarget
+            it.dropTarget = DropTarget(it, dt)
+        }
+        onDispose { frame?.let { f -> oldDropTarget?.let { f.dropTarget = it } } }
+    }
+
+    Scaffold(
+        topBar = {
+            LargeTopAppBar(
+                title = {
+                    Column {
+                        Text("Note Spese", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("${noteSpese.size} trasferte", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
+                            Spacer(Modifier.width(8.dp))
+                            Text("v$APP_VERSION", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f))
+                        }
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { showPathField = !showPathField }) {
+                        Icon(Icons.Default.ContentPaste, "Incolla percorso")
+                    }
+                    IconButton(onClick = {
+                        val chooser = JFileChooser(FileSystemView.getFileSystemView().homeDirectory)
+                        chooser.dialogTitle = "Importa: cartella (CSV) o file .notaspese"
+                        chooser.fileSelectionMode = JFileChooser.FILES_AND_DIRECTORIES
+                        if (chooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) {
+                            val f = chooser.selectedFile ?: return@IconButton
+                            when {
+                                f.isDirectory -> onImportFromFolder(f)
+                                f.name.endsWith(".notaspese", ignoreCase = true) -> onImportFromNotaSpeseFile(f)
+                                f.extension.equals("csv", ignoreCase = true) -> onImportFromFolder(f.parentFile ?: f)
+                                else -> onImportFromFolder(f.parentFile ?: f)
+                            }
+                        }
+                    }) {
+                        Icon(Icons.Default.Upload, "Importa da cartella o file .notaspese")
+                    }
+                },
+                colors = TopAppBarDefaults.largeTopAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
+            )
+        },
+        bottomBar = {
+            if (showPathField) {
+                Surface(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)) {
+                    Row(
+                        Modifier.fillMaxWidth().padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        OutlinedTextField(
+                            value = pathInput,
+                            onValueChange = { pathInput = it },
+                            placeholder = { Text("Incolla percorso file .notaspese o cartella CSV...") },
+                            modifier = Modifier.weight(1f),
+                            singleLine = true
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Button(onClick = {
+                            pathInput.trim().takeIf { it.isNotBlank() }?.let { onImportFromPath(it); pathInput = ""; showPathField = false }
+                        }) { Text("Importa") }
+                        IconButton(onClick = { showPathField = false }) { Icon(Icons.Default.Close, "Chiudi") }
+                    }
+                }
+            }
+        },
+        floatingActionButton = {
+            ExtendedFloatingActionButton(
+                onClick = onNavigateToCreate,
+                icon = { Icon(Icons.Default.Add, null) },
+                text = { Text("Nuova Nota") }
+            )
+        }
+    ) { padding ->
+        if (noteSpese.isEmpty()) {
+            Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(Icons.Default.Receipt, null, Modifier.size(64.dp), tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f))
+                    Spacer(Modifier.height(16.dp))
+                    Text("Nessuna nota spese", style = MaterialTheme.typography.titleMedium)
+                    Text("Trascina qui file .notaspese o cartella CSV • Oppure usa Import", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
+                }
+            }
+        } else {
+            Box(Modifier.fillMaxSize().padding(padding)) {
+                LazyColumn(
+                    state = listState,
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.fillMaxSize().padding(end = 12.dp)
+                ) {
+                item {
+                    Text(
+                        "Trascina qui file .notaspese o cartella CSV per importare • Usa la rotella per scorrere",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                        modifier = Modifier.padding(bottom = 4.dp)
+                    )
+                }
+                items(noteSpese) { notaConSpese ->
+                    val nota = notaConSpese.notaSpese
+                    val dataInizioStr = dateFormatter.format(Date(nota.dataInizioTrasferta))
+                    Card(
+                        onClick = { onNavigateToDetail(nota.id) },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Column(Modifier.padding(16.dp)) {
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
+                                Column(Modifier.weight(1f)) {
+                                    Text("${nota.nomeCognome} - $dataInizioStr", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(Icons.Default.LocationOn, null, Modifier.size(14.dp), tint = MaterialTheme.colorScheme.primary)
+                                        Spacer(Modifier.width(4.dp))
+                                        Text(nota.luogoTrasferta, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
+                                    }
+                                }
+                                Surface(shape = RoundedCornerShape(8.dp), color = MaterialTheme.colorScheme.primaryContainer) {
+                                    Text("EUR %.2f".format(notaConSpese.totaleSpese), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp))
+                                }
+                            }
+                            Spacer(Modifier.height(12.dp))
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
+                            Spacer(Modifier.height(12.dp))
+                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Business, null, Modifier.size(14.dp), tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
+                                Spacer(Modifier.width(4.dp))
+                                Text(nota.cliente, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f), modifier = Modifier.weight(1f))
+                                Text("${notaConSpese.spese.size} spese", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
+                                Spacer(Modifier.width(8.dp))
+                                IconButton(onClick = { showDeleteDialog = notaConSpese }, modifier = Modifier.size(32.dp)) {
+                                    Icon(Icons.Default.Delete, "Elimina", tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f), modifier = Modifier.size(18.dp))
+                                }
+                            }
+                        }
+                    }
+                }
+                item { Spacer(Modifier.height(80.dp)) }
+                }
+                VerticalScrollbar(
+                    modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight(),
+                    adapter = rememberScrollbarAdapter(scrollState = listState)
+                )
+            }
+        }
+    }
+
+    showDeleteDialog?.let { notaConSpese ->
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = null },
+            icon = { Icon(Icons.Default.Warning, null, tint = MaterialTheme.colorScheme.error) },
+            title = { Text("Elimina Nota Spese") },
+            text = {
+                Column {
+                    Text("Sei sicuro di voler eliminare questa nota spese?")
+                    Spacer(Modifier.height(8.dp))
+                    Text("${notaConSpese.notaSpese.nomeCognome} - ${dateFormatter.format(Date(notaConSpese.notaSpese.dataInizioTrasferta))}", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                    Spacer(Modifier.height(4.dp))
+                    Text("Verranno eliminate anche ${notaConSpese.spese.size} spese.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onDeleteNota(notaConSpese)
+                        showDeleteDialog = null
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) { Text("Elimina") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = null }) { Text("Annulla") }
+            }
+        )
+    }
+}

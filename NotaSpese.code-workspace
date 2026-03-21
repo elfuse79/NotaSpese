@@ -9,6 +9,7 @@
 		"editor.tabSize": 4,
 		"files.encoding": "utf8",
 		"kotlin.languageServer.enabled": true,
-		"kotlin.completion.snippets.enabled": true
+		"kotlin.completion.snippets.enabled": true,
+		"java.configuration.updateBuildConfiguration": "interactive"
 	}
 }

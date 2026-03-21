@@ -1,4 +1,4 @@
-﻿package com.notaspese.ui.screens
+package com.notaspese.ui.screens
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -20,7 +20,7 @@ import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(noteSpese: List<NotaSpeseConSpese>, onNavigateToCreate: () -> Unit, onNavigateToDetail: (Long) -> Unit, onDeleteNota: (NotaSpeseConSpese) -> Unit = {}) {
+fun HomeScreen(noteSpese: List<NotaSpeseConSpese>, onNavigateToCreate: () -> Unit, onNavigateToDetail: (Long) -> Unit, onDeleteNota: (NotaSpeseConSpese) -> Unit = {}, onImportClick: () -> Unit = {}) {
     val dateFormatter = SimpleDateFormat("dd/MM/yyyy", Locale.ITALY)
     var showDeleteDialog by remember { mutableStateOf<NotaSpeseConSpese?>(null) }
     
@@ -37,6 +37,9 @@ fun HomeScreen(noteSpese: List<NotaSpeseConSpese>, onNavigateToCreate: () -> Uni
                         }
                     } 
                 },
+                actions = {
+                    IconButton(onClick = onImportClick) { Icon(Icons.Default.Upload, "Importa da CSV") }
+                },
                 colors = TopAppBarDefaults.largeTopAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
             )
         },
@@ -48,7 +51,7 @@ fun HomeScreen(noteSpese: List<NotaSpeseConSpese>, onNavigateToCreate: () -> Uni
                     Icon(Icons.Default.Receipt, null, Modifier.size(64.dp), tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f))
                     Spacer(Modifier.height(16.dp))
                     Text("Nessuna nota spese", style = MaterialTheme.typography.titleMedium)
-                    Text("Tocca + per creare", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
+                    Text("Tocca + per creare o Importa per caricare da Windows/Desktop", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
                 }
             }
         } else {
