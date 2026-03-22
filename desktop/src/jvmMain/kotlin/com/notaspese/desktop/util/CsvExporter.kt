@@ -8,7 +8,7 @@ import java.util.*
 
 object CsvExporter {
 
-    fun exportToCsv(notaSpeseConSpese: NotaSpeseConSpese, outputDir: File): File? {
+    fun exportToCsv(notaSpeseConSpese: NotaSpeseConSpese, outputDir: File, baseName: String? = null): File? {
         return try {
             val dateFormatter = SimpleDateFormat("dd/MM/yyyy", Locale.ITALY)
             val nota = notaSpeseConSpese.notaSpese
@@ -102,7 +102,8 @@ object CsvExporter {
             if (nota.totaleRimborsoKm > 0) sb.appendLine("Rimborso Km;${String.format(Locale.ITALY, "%.2f", nota.totaleRimborsoKm)}")
             sb.appendLine("COSTO COMPLESSIVO NOTA SPESE;${String.format(Locale.ITALY, "%.2f", notaSpeseConSpese.costoComplessivoNotaSpese)}")
 
-            val csvFile = File(outputDir, "NotaSpese_${nota.nomeCognome.replace(" ", "_")}.csv")
+            val csvFileName = baseName?.let { "$it.csv" } ?: "NotaSpese_${nota.nomeCognome.replace(" ", "_")}.csv"
+            val csvFile = File(outputDir, csvFileName)
             FileWriter(csvFile).use { it.write(sb.toString()) }
             csvFile
         } catch (e: Exception) {

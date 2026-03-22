@@ -1,4 +1,4 @@
-﻿package com.notaspese.util
+package com.notaspese.util
 
 import android.content.Context
 import android.content.Intent
@@ -17,21 +17,22 @@ import java.util.*
 
 object CsvExporter {
     
-    fun exportToCsv(context: Context, notaSpeseConSpese: NotaSpeseConSpese): File? {
+    fun exportToCsv(context: Context, notaSpeseConSpese: NotaSpeseConSpese, targetDir: File? = null, baseName: String? = null): File? {
         return try {
             val dateFormatter = SimpleDateFormat("dd/MM/yyyy", Locale.ITALY)
             val fileNameDateFormatter = SimpleDateFormat("yyyy-MM-dd_HHmm", Locale.ITALY)
             val nota = notaSpeseConSpese.notaSpese
+            val defaultFolderName = "${nota.nomeCognome.replace(" ", "_")}_${fileNameDateFormatter.format(Date(nota.dataInizioTrasferta))}"
             
-            // Crea la struttura cartelle: Download/Innoval Nota Spese/[Nome Nota Spese]
-            val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-            val innovolDir = File(downloadsDir, "Innoval Nota Spese")
-            if (!innovolDir.exists()) innovolDir.mkdirs()
-            
-            // Nome cartella: NomeCognome_DataInizio
-            val folderName = "${nota.nomeCognome.replace(" ", "_")}_${fileNameDateFormatter.format(Date(nota.dataInizioTrasferta))}"
-            val notaDir = File(innovolDir, folderName)
-            if (!notaDir.exists()) notaDir.mkdirs()
+            val notaDir = if (targetDir != null) {
+                targetDir
+            } else {
+                val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+                val innovolDir = File(downloadsDir, "Innoval Nota Spese")
+                if (!innovolDir.exists()) innovolDir.mkdirs()
+                val folderName = baseName ?: defaultFolderName
+                File(innovolDir, folderName).also { if (!it.exists()) it.mkdirs() }
+            }
             
             // Genera contenuto CSV
             val sb = StringBuilder()
@@ -159,7 +160,7 @@ object CsvExporter {
             sb.appendLine("COSTO COMPLESSIVO NOTA SPESE;${String.format(Locale.ITALY, "%.2f", notaSpeseConSpese.costoComplessivoNotaSpese)}")
             
             // Salva file CSV
-            val csvFileName = "NotaSpese_${nota.nomeCognome.replace(" ", "_")}.csv"
+            val csvFileName = baseName?.let { "$it.csv" } ?: "NotaSpese_${nota.nomeCognome.replace(" ", "_")}.csv"
             val csvFile = File(notaDir, csvFileName)
             FileWriter(csvFile).use { it.write(sb.toString()) }
             

@@ -1,6 +1,10 @@
 package com.notaspese.ui.screens
 
+import android.content.Intent
+import android.net.Uri
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -21,6 +25,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.documentfile.provider.DocumentFile
 import com.notaspese.data.model.*
 import com.notaspese.ui.components.TotaleCard
 import com.notaspese.ui.components.getCategoriaColor
@@ -29,6 +34,7 @@ import com.notaspese.data.model.APP_VERSION
 import com.notaspese.util.CsvExporter
 import com.notaspese.util.NotaSpeseExporter
 import com.notaspese.util.PdfGenerator
+import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -40,11 +46,84 @@ fun DetailScreen(notaSpeseConSpese: NotaSpeseConSpese?, onNavigateBack: () -> Un
     var showAnticipoDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf<Spesa?>(null) }
     var showExportOptions by remember { mutableStateOf(false) }
+    var showExportNameDialog by remember { mutableStateOf(false) }
+    var pendingExportBaseName by remember { mutableStateOf<String?>(null) }
     var isGeneratingPdf by remember { mutableStateOf(false) }
-    var generatedPdfFile by remember { mutableStateOf<java.io.File?>(null) }
+    var generatedPdfFile by remember { mutableStateOf<File?>(null) }
+    var generatedPdfUri by remember { mutableStateOf<Uri?>(null) }
     var showPdfDialog by remember { mutableStateOf(false) }
+    var showOpenPdfDialog by remember { mutableStateOf(false) }
+    var exportIncludePdf by remember { mutableStateOf(true) }
     var showDebugDialog by remember { mutableStateOf(false) }
     var debugInfo by remember { mutableStateOf("") }
+    
+    fun sanitizeFileName(s: String) = s.replace(Regex("[\\\\/:*?\"<>|]"), "_").trim()
+    
+    val folderPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocumentTree()
+    ) { uri: Uri? ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        val notaRef = notaSpeseConSpese ?: return@rememberLauncherForActivityResult
+        val includePdf = exportIncludePdf
+        val baseName = pendingExportBaseName?.let { sanitizeFileName(it).ifBlank { null } }
+        pendingExportBaseName = null
+        try {
+            context.contentResolver.takePersistableUriPermission(
+                uri,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+            )
+        } catch (_: SecurityException) {}
+        isGeneratingPdf = true
+        generatedPdfUri = null
+        generatedPdfFile = null
+        val tempDir = File(context.cacheDir, "export_${System.currentTimeMillis()}")
+        tempDir.mkdirs()
+        try {
+            var pdfFile: File? = null
+            if (includePdf) {
+                pdfFile = PdfGenerator.generatePdf(context, notaRef, tempDir, baseName)
+                if (pdfFile == null) {
+                    debugInfo = PdfGenerator.getDebugInfo(notaRef)
+                    showDebugDialog = true
+                    return@rememberLauncherForActivityResult
+                }
+            }
+            val folder = CsvExporter.exportToCsv(context, notaRef, tempDir, baseName)
+            folder?.let { NotaSpeseExporter.exportToNotaSpeseFile(context, notaRef, it, baseName) }
+            val rootDoc = DocumentFile.fromTreeUri(context, uri) ?: return@rememberLauncherForActivityResult
+            val n = notaRef.notaSpese
+            val defaultFolderName = "${n.nomeCognome.replace(" ", "_")}_${SimpleDateFormat("yyyy-MM-dd_HHmm", Locale.ITALY).format(Date(n.dataInizioTrasferta))}"
+            val folderName = baseName ?: defaultFolderName
+            val notaDocDir = rootDoc.createDirectory(folderName) ?: rootDoc
+            tempDir.listFiles()?.forEach { file ->
+                val mime = when (file.extension.lowercase()) {
+                    "pdf" -> "application/pdf"
+                    "csv" -> "text/csv"
+                    "notaspese" -> "application/zip"
+                    else -> "application/octet-stream"
+                }
+                val docFile = notaDocDir.createFile(mime, file.name) ?: return@forEach
+                context.contentResolver.openOutputStream(docFile.uri)?.use { out ->
+                    file.inputStream().use { it.copyTo(out) }
+                }
+                if (file.name.endsWith(".pdf", ignoreCase = true)) {
+                    generatedPdfUri = docFile.uri
+                }
+            }
+            if (includePdf) {
+                if (generatedPdfUri == null) generatedPdfFile = pdfFile
+                showOpenPdfDialog = true
+            } else {
+                Toast.makeText(context, "Salvato in: $folderName\n(CSV + .notaspese + allegati)", Toast.LENGTH_LONG).show()
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Toast.makeText(context, "Errore durante esportazione: ${e.message}", Toast.LENGTH_LONG).show()
+        } finally {
+            tempDir.deleteRecursively()
+            isGeneratingPdf = false
+        }
+    }
     
     if (notaSpeseConSpese == null) { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }; return }
     
@@ -363,6 +442,48 @@ fun DetailScreen(notaSpeseConSpese: NotaSpeseConSpese?, onNavigateBack: () -> Un
     
     showDeleteDialog?.let { spesa -> AlertDialog(onDismissRequest = { showDeleteDialog = null }, title = { Text("Elimina Spesa") }, text = { Text("Eliminare questa spesa di EUR %.2f?".format(spesa.importo)) }, confirmButton = { TextButton(onClick = { onDeleteSpesa(spesa); showDeleteDialog = null }, colors = ButtonDefaults.textButtonColors(contentColor = Error)) { Text("Elimina") } }, dismissButton = { TextButton(onClick = { showDeleteDialog = null }) { Text("Annulla") } }) }
     
+    var exportNameInput by remember { mutableStateOf("") }
+    LaunchedEffect(showExportNameDialog, notaSpeseConSpese) {
+        if (showExportNameDialog && notaSpeseConSpese != null) {
+            val n = notaSpeseConSpese.notaSpese
+            exportNameInput = "${n.nomeCognome.replace(" ", "_")}_${SimpleDateFormat("yyyy-MM-dd_HHmm", Locale.ITALY).format(Date(n.dataInizioTrasferta))}"
+        }
+    }
+    if (showExportNameDialog) {
+        AlertDialog(
+            onDismissRequest = { showExportNameDialog = false },
+            title = { Text("Nome cartella e file") },
+            text = {
+                Column {
+                    Text(
+                        "Nome per cartella, PDF, CSV e file .notaspese (senza estensione). Puoi modificarlo qui:",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = exportNameInput,
+                        onValueChange = { exportNameInput = it },
+                        label = { Text("Nome") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(onClick = {
+                    val raw = exportNameInput.trim()
+                    pendingExportBaseName = raw.ifBlank { null }?.replace(Regex("\\.(pdf|csv|notaspese)$", RegexOption.IGNORE_CASE), "")?.trim()?.ifBlank { null }
+                    showExportNameDialog = false
+                    folderPickerLauncher.launch(null)
+                }) { Text("Continua") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showExportNameDialog = false }) { Text("Annulla") }
+            }
+        )
+    }
+    
     // Bottom sheet per opzioni di esportazione
     if (showExportOptions) {
         ModalBottomSheet(onDismissRequest = { showExportOptions = false }) {
@@ -377,7 +498,7 @@ fun DetailScreen(notaSpeseConSpese: NotaSpeseConSpese?, onNavigateBack: () -> Un
                 // Genera PDF + CSV + Allegati
                 ListItem(
                     headlineContent = { Text("Genera PDF + CSV + Allegati") },
-                    supportingContent = { Text("Crea PDF completo con riepilogo, scontrini, CSV e allegati") },
+                    supportingContent = { Text("Scegli nome e dove salvare: PDF, CSV, file .notaspese e allegati") },
                     leadingContent = { 
                         Icon(
                             Icons.Default.PictureAsPdf, 
@@ -387,25 +508,8 @@ fun DetailScreen(notaSpeseConSpese: NotaSpeseConSpese?, onNavigateBack: () -> Un
                     },
                     modifier = Modifier.clickable {
                         showExportOptions = false
-                        isGeneratingPdf = true
-                        
-                        // Genera PDF
-                        val pdfFile = PdfGenerator.generatePdf(context, notaSpeseConSpese)
-                        
-                        // Esporta anche CSV + .notaspese + allegati nella stessa cartella
-                        val folder = CsvExporter.exportToCsv(context, notaSpeseConSpese)
-                        folder?.let { NotaSpeseExporter.exportToNotaSpeseFile(context, notaSpeseConSpese, it) }
-                        
-                        isGeneratingPdf = false
-                        
-                        if (pdfFile != null) {
-                            generatedPdfFile = pdfFile
-                            showPdfDialog = true
-                        } else {
-                            // Mostra debug info per capire l'errore
-                            debugInfo = PdfGenerator.getDebugInfo(notaSpeseConSpese)
-                            showDebugDialog = true
-                        }
+                        exportIncludePdf = true
+                        showExportNameDialog = true
                     }
                 )
                 
@@ -413,8 +517,8 @@ fun DetailScreen(notaSpeseConSpese: NotaSpeseConSpese?, onNavigateBack: () -> Un
                 
                 // Solo CSV con allegati
                 ListItem(
-                    headlineContent = { Text("Solo CSV + Allegati") },
-                    supportingContent = { Text("Esporta solo i dati in CSV con foto e PDF") },
+                    headlineContent = { Text("Solo CSV + Allegati + .notaspese") },
+                    supportingContent = { Text("Scegli nome e dove salvare: CSV, file .notaspese e allegati") },
                     leadingContent = { 
                         Icon(
                             Icons.Default.TableChart, 
@@ -424,17 +528,8 @@ fun DetailScreen(notaSpeseConSpese: NotaSpeseConSpese?, onNavigateBack: () -> Un
                     },
                     modifier = Modifier.clickable {
                         showExportOptions = false
-                        val folder = CsvExporter.exportToCsv(context, notaSpeseConSpese)
-                        folder?.let { NotaSpeseExporter.exportToNotaSpeseFile(context, notaSpeseConSpese, it) }
-                        if (folder != null) {
-                            val path = CsvExporter.getExportFolderPath(notaSpeseConSpese)
-                            val numAllegati = notaSpeseConSpese.spese.count { it.fotoScontrinoPath != null }
-                            val allegatoMsg = if (numAllegati > 0) " + $numAllegati allegati" else ""
-                            Toast.makeText(context, "Salvato in:\n$path\n(CSV$allegatoMsg)", Toast.LENGTH_LONG).show()
-                            CsvExporter.shareFile(context, folder)
-                        } else {
-                            Toast.makeText(context, "Errore durante esportazione", Toast.LENGTH_SHORT).show()
-                        }
+                        exportIncludePdf = false
+                        showExportNameDialog = true
                     }
                 )
                 
@@ -462,7 +557,66 @@ fun DetailScreen(notaSpeseConSpese: NotaSpeseConSpese?, onNavigateBack: () -> Un
         }
     }
     
-    // Dialog per PDF generato con opzioni Apri/Condividi
+    // Dialog "Apri il PDF?" dopo esportazione con scelta cartella
+    if (showOpenPdfDialog) {
+        AlertDialog(
+            onDismissRequest = { showOpenPdfDialog = false },
+            icon = { Icon(Icons.Default.PictureAsPdf, null, tint = MaterialTheme.colorScheme.error) },
+            title = { Text("Esportazione completata") },
+            text = {
+                Column {
+                    Text("La cartella contiene: PDF, CSV, file .notaspese e allegati.")
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        "Apri il file .notaspese su Android o Windows per modificare la nota e ricreare il PDF.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    Text("Vuoi aprire il PDF ora?", style = MaterialTheme.typography.bodyMedium)
+                }
+            },
+            confirmButton = {
+                Button(onClick = {
+                    val uri = generatedPdfUri
+                    val file = generatedPdfFile
+                    when {
+                        uri != null -> {
+                            val intent = Intent(Intent.ACTION_VIEW).apply {
+                                setDataAndType(uri, "application/pdf")
+                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            }
+                            try { context.startActivity(intent) } catch (e: Exception) {
+                                Toast.makeText(context, "Nessuna app per aprire PDF", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                        file != null -> {
+                            val fileUri = androidx.core.content.FileProvider.getUriForFile(
+                                context, "${context.packageName}.fileprovider", file
+                            )
+                            val intent = Intent(Intent.ACTION_VIEW).apply {
+                                setDataAndType(fileUri, "application/pdf")
+                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            }
+                            try { context.startActivity(intent) } catch (e: Exception) {
+                                Toast.makeText(context, "Nessuna app per aprire PDF", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    }
+                    showOpenPdfDialog = false
+                }) {
+                    Icon(Icons.Default.OpenInNew, null, Modifier.size(18.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("Apri PDF")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showOpenPdfDialog = false }) { Text("Chiudi") }
+            }
+        )
+    }
+    
+    // Dialog per PDF generato con opzioni Apri/Condividi (legacy - ora usato showOpenPdfDialog)
     if (showPdfDialog && generatedPdfFile != null) {
         AlertDialog(
             onDismissRequest = { showPdfDialog = false },

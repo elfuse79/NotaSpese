@@ -27,7 +27,7 @@ compose.desktop {
         nativeDistributions {
             targetFormats(org.jetbrains.compose.desktop.application.dsl.TargetFormat.Exe, org.jetbrains.compose.desktop.application.dsl.TargetFormat.Msi)
             packageName = "NotaSpese"
-            packageVersion = "1.3.2"
+            packageVersion = "1.3.7"
         }
     }
 }
@@ -39,7 +39,7 @@ kotlin {
 tasks.register<Copy>("copyToDesktop") {
     dependsOn("createDistributable")
     from(layout.buildDirectory.dir("compose/binaries/main/app/NotaSpese"))
-    into(file("${System.getProperty("user.home")}/Desktop/NotaSpese_v1.3.2"))
+    into(file("${System.getProperty("user.home")}/Desktop/NotaSpese_v1.3.5"))
     doLast {
         project.file("${destinationDir}/Avvia NotaSpese.bat").writeText("""
             @echo off
@@ -56,13 +56,13 @@ tasks.register<Copy>("copyToDesktop") {
 
 tasks.register<Copy>("copyJarToDesktop") {
     dependsOn("packageUberJarForCurrentOS")
-    from(layout.buildDirectory.file("compose/jars/NotaSpese-windows-x64-1.3.2.jar"))
-    into(file("${System.getProperty("user.home")}/Desktop/NotaSpese_v1.3.2"))
+    from(layout.buildDirectory.file("compose/jars/NotaSpese-windows-x64-1.3.7.jar"))
+    into(file("${System.getProperty("user.home")}/Desktop/NotaSpese_v1.3.5"))
     doLast {
         project.file("${destinationDir}/Avvia NotaSpese (JAR).bat").writeText("""
             @echo off
             cd /d "%~dp0"
-            java -jar "NotaSpese-windows-x64-1.3.2.jar"
+            java -jar "NotaSpese-windows-x64-1.3.7.jar"
             if errorlevel 1 (
                 echo.
                 echo Richiesto Java 17 o superiore. Scaricalo da https://adoptium.net/

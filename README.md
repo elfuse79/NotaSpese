@@ -1,6 +1,6 @@
 # NotaSpese - App Gestione Note Spese
 
-**Versione:** 1.2.0
+**Versione:** 1.3.7
 
 App per la gestione delle note spese aziendali, disponibile per **Android** e **Windows 11**. Sviluppata con Kotlin, Jetpack Compose (Android) e Compose for Desktop (Windows). Interoperabilità completa tra le due piattaforme tramite export/import CSV e file .notaspese (anche da versioni precedenti).
 
@@ -44,7 +44,9 @@ App per la gestione delle note spese aziendali, disponibile per **Android** e **
 ### Export Dati
 - Export CSV con allegati
 - Export file **.notaspese** (ZIP con JSON + allegati) per compatibilità cross-piattaforma
-- Condivisione PDF via app esterne
+- **Scelta nome e cartella** (Android: dialogo nome + selettore cartelle, Windows: dialogo nome + finestra di dialogo)
+- **Opzione "Apri PDF"** dopo l'esportazione
+- Cartella completa con PDF, CSV, .notaspese e allegati per import su altro device
 - **Import**: CSV, cartella con CSV, o file .notaspese (anche da versioni precedenti v1.0.x)
 - Android ↔ Windows: apri e modifica note create dall'altra app
 
@@ -55,10 +57,10 @@ App per la gestione delle note spese aziendali, disponibile per **Android** e **
 | Piattaforma | Tecnologia | Output |
 |-------------|------------|--------|
 | **Android** | Kotlin, Jetpack Compose, Room | APK |
-| **Windows 11** | Kotlin, Compose for Desktop, SQLite | .exe / .msi |
+| **Windows 11** | Kotlin, Compose for Desktop, SQLite | .exe / .jar |
 
 ### Interoperabilità
-- **Export**: Crea cartella `Downloads/Innoval Nota Spese/NomeCognome_Data/` con PDF, CSV, .notaspese e allegati
+- **Export**: Scegli dove salvare → cartella con PDF, CSV, .notaspese e allegati
 - **Import Android**: File CSV o .notaspese (anche da versioni precedenti)
 - **Import Windows**: Cartella (CSV) o file .notaspese
 - Stesso formato dati per modificare note su entrambe le piattaforme
@@ -83,6 +85,20 @@ App per la gestione delle note spese aziendali, disponibile per **Android** e **
 ---
 
 ## 📋 Changelog
+
+### v1.3.5 (Marzo 2026)
+- **PDF**: colonne spese riordinate in Data, Categoria, Descrizione, Importo
+- **PDF**: più spazio per la descrizione (tabella e sezione NOTE)
+
+### v1.3.5 (Marzo 2026)
+- **Scelta nome file**: proposta nome personalizzabile per cartella, PDF, CSV e .notaspese
+
+### v1.3.3 (Marzo 2026)
+- Fix crash Windows: "Cannot call invokeAndWait from the event dispatcher thread" risolto
+- Export con scelta cartella e opzione "Apri PDF" su entrambe le piattaforme
+
+### v1.3.2 (Marzo 2026)
+- Export: scelta cartella di salvataggio, opzione "Apri PDF", cartella con allegati e file .notaspese
 
 ### v1.2.0 (Marzo 2026)
 - **Import/Export .notaspese**: supporto file da versioni precedenti (v1.0.x)
@@ -142,69 +158,70 @@ NotaSpese/
 ## 📲 Installazione
 
 ### Android
-1. Scaricare il file APK (es. `NotaSpese_1.1.0.apk`)
-2. Abilitare "Installa da fonti sconosciute" nelle impostazioni
-3. Installare l'APK
-4. Concedere i permessi richiesti (Camera, Storage)
+1. Scaricare il file APK `NotaSpese_1.3.7.apk` dalla cartella sul Desktop
+2. Trasferire su dispositivo Android (email, cloud, USB)
+3. Abilitare "Installa da fonti sconosciute" nelle impostazioni
+4. Installare l'APK
+5. Concedere i permessi richiesti (Camera, Storage)
 
 ### Windows 11
-**Opzione A – Distribuzione completa (consigliato, no Java richiesto):**
-```bash
-./gradlew :desktop:copyToDesktop
-```
-Copia su `Desktop/NotaSpese_v1.1.0/`. Avviare con:
+Dalla cartella `Desktop/NotaSpese_v1.3.7/`:
+
+**Opzione A – Eseguibile (consigliato, no Java richiesto):**
 - Doppio clic su `Avvia NotaSpese.bat`, oppure
-- Doppio clic su `NotaSpese.exe`
+- Doppio clic su `NotaSpese.exe` (se presente)
 
 **Opzione B – Solo JAR (richiede Java 17+):**
-```bash
-./gradlew :desktop:copyJarToDesktop
-```
-Usa `Avvia NotaSpese (JAR).bat` oppure:
-```bash
-java -jar NotaSpese-windows-x64-1.1.0.jar
-```
-⚠️ **ClassNotFoundException:** Usare il file `NotaSpese-windows-x64-1.1.0.jar` dalla cartella `desktop/build/compose/jars/`, non `desktop.jar`. Serve Java 17 o superiore.
+- Doppio clic su `Avvia NotaSpese (JAR).bat`, oppure
+- Da terminale: `java -jar NotaSpese-windows-x64-1.3.7.jar`
+
+⚠️ **Java 17+ richiesto** per l'opzione JAR. Scaricabile da [adoptium.net](https://adoptium.net/)
 
 ---
 
 ## 🔨 Compilazione
 
-**Nota:** Per compilare serve **Java 17** (Java 25 non compatibile). Impostare `JAVA_HOME` a un JDK 17 se necessario.
+**Nota:** Per compilare serve **Java 17**. Impostare `JAVA_HOME` a un JDK 17 se necessario.
+
+### Build completo (Android + Windows) e copia su Desktop
+```bash
+./gradlew buildAndCopyAll
+```
+Output: `Desktop/NotaSpese_v1.3.5/` con:
+- `NotaSpese_1.3.5.apk` – App Android
+- `NotaSpese-windows-x64-1.3.5.jar` – App Windows (richiede Java 17+)
+- `NotaSpese.exe` – Eseguibile Windows (se generato)
+- `Avvia NotaSpese.bat` – Avvia exe o JAR
+- `Avvia NotaSpese (JAR).bat` – Avvia solo JAR
+- `README.md` – Questo file
 
 ### Android
 ```bash
-# Richiede ANDROID_HOME o local.properties con sdk.dir
 ./gradlew :app:assembleRelease
 # APK in: app/build/outputs/apk/release/app-release.apk
 ```
 
 ### Windows
 ```bash
-# Build completo (Android + Windows) e copia su Desktop
-./gradlew buildAndCopyAll
-# Output: Desktop/NotaSpese_v1.2.0/ con APK, JAR e script di avvio
+# Solo JAR
+./gradlew :desktop:packageUberJarForCurrentOS
+# Output: desktop/build/compose/jars/NotaSpese-windows-x64-1.3.7.jar
 
-# Solo distribuzione Windows con exe (chiudere l'app se già aperta)
+# Eseguibile (chiudere l'app se già aperta)
 ./gradlew :desktop:createDistributable
 ./gradlew :desktop:copyToDesktop
-
-# Solo JAR eseguibile
-./gradlew :desktop:packageUberJarForCurrentOS
-# Output: desktop/build/compose/jars/NotaSpese-windows-x64-1.2.0.jar
 ```
 
 ---
 
-## 📄 Output Files
+## 📄 Export Note Spese
 
-I file generati vengono salvati in:
-```
-Downloads/Innoval Nota Spese/[NomeCognome]_[Data]/
-├── NotaSpese_[NomeCognome].pdf
-├── NotaSpese_[NomeCognome].csv
-└── scontrino_001_[categoria].jpg (allegati)
-```
+Quando esporti una nota spese (tasto Condividi):
+1. **Scegli il nome** per cartella e file (proposta modificabile)
+2. **Scegli la cartella** dove salvare
+3. Viene creata una sottocartella con: PDF, CSV, file .notaspese e allegati
+4. Puoi **aprire il PDF** subito se lo desideri
+5. Il file **.notaspese** può essere aperto su Android o Windows da un altro device per modificare la nota e rigenerare il PDF
 
 ---
 

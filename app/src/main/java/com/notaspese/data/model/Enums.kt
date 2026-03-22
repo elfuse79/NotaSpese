@@ -1,7 +1,7 @@
 package com.notaspese.data.model
 
 // Versione software dell'applicazione
-const val APP_VERSION = "1.3.2"
+const val APP_VERSION = "1.3.7"
 
 enum class MetodoPagamento(val displayName: String) {
     CARTA_CREDITO("Carta di Credito"),

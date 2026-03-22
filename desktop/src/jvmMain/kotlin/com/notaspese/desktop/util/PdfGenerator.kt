@@ -24,7 +24,7 @@ object PdfGenerator {
 
     private fun yCoord(y: Float): Float = PAGE_HEIGHT - y  // PDFBox: y=0 at bottom
 
-    fun generatePdf(outputDir: File, notaSpeseConSpese: NotaSpeseConSpese): File? {
+    fun generatePdf(outputDir: File, notaSpeseConSpese: NotaSpeseConSpese, baseName: String? = null): File? {
         return try {
             val dateFormatter = SimpleDateFormat("dd/MM/yyyy", Locale.ITALY)
             val fileNameDateFormatter = SimpleDateFormat("yyyy-MM-dd_HHmm", Locale.ITALY)
@@ -66,6 +66,14 @@ object PdfGenerator {
                 contentStream.newLineAtOffset(x, yCoord(y))
                 contentStream.showText(text)
                 contentStream.endText()
+            }
+
+            fun textWidth(text: String, font: PDType1Font, size: Float): Float =
+                font.getStringWidth(text) / 1000f * size
+
+            fun drawTextRight(text: String, xRight: Float, y: Float, font: PDType1Font, size: Float, color: Color = Color.BLACK) {
+                val w = textWidth(text, font, size)
+                drawText(text, xRight - w, y, font, size, color)
             }
 
             fun drawLine(x1: Float, y1: Float, x2: Float, y2: Float) {
@@ -154,11 +162,13 @@ object PdfGenerator {
                 drawRect(leftColX, yPosition - 12, colWidth, 18f, Color(0x15, 0x65, 0xC0))
                 drawRect(rightColX, yPosition - 12, colWidth, 18f, Color(0x2E, 0x7D, 0x32))
                 drawText("Data", leftColX + 5, yPosition, PDType1Font.HELVETICA_BOLD, 9f, Color.WHITE)
-                drawText("Descrizione", leftColX + 55, yPosition, PDType1Font.HELVETICA_BOLD, 9f, Color.WHITE)
-                drawText("Importo", leftColX + colWidth - 50, yPosition, PDType1Font.HELVETICA_BOLD, 9f, Color.WHITE)
+                drawText("Cat.", leftColX + 58, yPosition, PDType1Font.HELVETICA_BOLD, 9f, Color.WHITE)
+                drawText("Desc.", leftColX + 88, yPosition, PDType1Font.HELVETICA_BOLD, 9f, Color.WHITE)
+                drawText("€", leftColX + colWidth - 5, yPosition, PDType1Font.HELVETICA_BOLD, 9f, Color.WHITE)
                 drawText("Data", rightColX + 5, yPosition, PDType1Font.HELVETICA_BOLD, 9f, Color.WHITE)
-                drawText("Descrizione", rightColX + 55, yPosition, PDType1Font.HELVETICA_BOLD, 9f, Color.WHITE)
-                drawText("Importo", rightColX + colWidth - 50, yPosition, PDType1Font.HELVETICA_BOLD, 9f, Color.WHITE)
+                drawText("Cat.", rightColX + 58, yPosition, PDType1Font.HELVETICA_BOLD, 9f, Color.WHITE)
+                drawText("Desc.", rightColX + 88, yPosition, PDType1Font.HELVETICA_BOLD, 9f, Color.WHITE)
+                drawText("€", rightColX + colWidth - 5, yPosition, PDType1Font.HELVETICA_BOLD, 9f, Color.WHITE)
                 yPosition += 18f
 
                 val maxRows = maxOf(speseAzienda.size, speseDipendente.size)
@@ -172,15 +182,17 @@ object PdfGenerator {
                         val spesa = speseAzienda[rowIdx]
                         val desc = spesa.descrizione.ifBlank { spesa.categoria.displayName }
                         drawText(dateFormatter.format(Date(spesa.data)), leftColX + 5, yPosition, PDType1Font.HELVETICA, 9f)
-                        drawText(truncateText(desc, 12), leftColX + 55, yPosition, PDType1Font.HELVETICA, 9f)
-                        drawText("€ ${String.format(Locale.ITALY, "%.2f", spesa.importo)}", leftColX + colWidth - 50, yPosition, PDType1Font.HELVETICA, 9f)
+                        drawText(truncateText(spesa.categoria.displayName, 8), leftColX + 58, yPosition, PDType1Font.HELVETICA, 9f)
+                        drawText(truncateText(desc, 16), leftColX + 88, yPosition, PDType1Font.HELVETICA, 9f)
+                        drawTextRight(String.format(Locale.ITALY, "%.2f", spesa.importo), leftColX + colWidth - 5, yPosition, PDType1Font.HELVETICA, 9f)
                     }
                     if (rowIdx < speseDipendente.size) {
                         val spesa = speseDipendente[rowIdx]
                         val desc = spesa.descrizione.ifBlank { spesa.categoria.displayName }
                         drawText(dateFormatter.format(Date(spesa.data)), rightColX + 5, yPosition, PDType1Font.HELVETICA, 9f)
-                        drawText(truncateText(desc, 12), rightColX + 55, yPosition, PDType1Font.HELVETICA, 9f)
-                        drawText("€ ${String.format(Locale.ITALY, "%.2f", spesa.importo)}", rightColX + colWidth - 50, yPosition, PDType1Font.HELVETICA, 9f)
+                        drawText(truncateText(spesa.categoria.displayName, 8), rightColX + 58, yPosition, PDType1Font.HELVETICA, 9f)
+                        drawText(truncateText(desc, 16), rightColX + 88, yPosition, PDType1Font.HELVETICA, 9f)
+                        drawTextRight(String.format(Locale.ITALY, "%.2f", spesa.importo), rightColX + colWidth - 5, yPosition, PDType1Font.HELVETICA, 9f)
                     }
                     yPosition += 16f
                 }
@@ -188,10 +200,10 @@ object PdfGenerator {
                 yPosition += 5f
                 drawRect(leftColX, yPosition - 5, colWidth, 20f, Color(0xE3, 0xF2, 0xFD))
                 drawRect(rightColX, yPosition - 5, colWidth, 20f, Color(0xE8, 0xF5, 0xE9))
-                drawText("TOTALE AZIENDA:", leftColX + 5, yPosition + 8, PDType1Font.HELVETICA_BOLD, 10f)
-                drawText("€ ${String.format(Locale.ITALY, "%.2f", notaSpeseConSpese.totalePagatoAzienda)}", leftColX + colWidth - 70, yPosition + 8, PDType1Font.HELVETICA_BOLD, 11f, Color(0x15, 0x65, 0xC0))
-                drawText("TOTALE DIPENDENTE:", rightColX + 5, yPosition + 8, PDType1Font.HELVETICA_BOLD, 10f)
-                drawText("€ ${String.format(Locale.ITALY, "%.2f", notaSpeseConSpese.totalePagatoDipendente)}", rightColX + colWidth - 70, yPosition + 8, PDType1Font.HELVETICA_BOLD, 11f, Color(0x2E, 0x7D, 0x32))
+                drawText("TOT.AZIENDA:", leftColX + 5, yPosition + 8, PDType1Font.HELVETICA_BOLD, 10f)
+                drawTextRight("€ ${String.format(Locale.ITALY, "%.2f", notaSpeseConSpese.totalePagatoAzienda)}", leftColX + colWidth - 5, yPosition + 8, PDType1Font.HELVETICA_BOLD, 11f, Color(0x15, 0x65, 0xC0))
+                drawText("TOT.DIP.:", rightColX + 5, yPosition + 8, PDType1Font.HELVETICA_BOLD, 10f)
+                drawTextRight("€ ${String.format(Locale.ITALY, "%.2f", notaSpeseConSpese.totalePagatoDipendente)}", rightColX + colWidth - 5, yPosition + 8, PDType1Font.HELVETICA_BOLD, 11f, Color(0x2E, 0x7D, 0x32))
                 yPosition += 30f
             } else {
                 checkNewPage(100f)
@@ -199,9 +211,9 @@ object PdfGenerator {
                 yPosition += 20f
                 drawRect(MARGIN, yPosition - 12, PAGE_WIDTH - MARGIN * 2, 18f, Color(0x15, 0x65, 0xC0))
                 drawText("Data", MARGIN + 10, yPosition, PDType1Font.HELVETICA_BOLD, 9f, Color.WHITE)
-                drawText("Descrizione", MARGIN + 80, yPosition, PDType1Font.HELVETICA_BOLD, 9f, Color.WHITE)
-                drawText("Categoria", MARGIN + 250, yPosition, PDType1Font.HELVETICA_BOLD, 9f, Color.WHITE)
-                drawText("Importo", PAGE_WIDTH - MARGIN - 70, yPosition, PDType1Font.HELVETICA_BOLD, 9f, Color.WHITE)
+                drawText("Cat.", MARGIN + 58, yPosition, PDType1Font.HELVETICA_BOLD, 9f, Color.WHITE)
+                drawText("Desc.", MARGIN + 88, yPosition, PDType1Font.HELVETICA_BOLD, 9f, Color.WHITE)
+                drawText("€", PAGE_WIDTH - MARGIN - 5, yPosition, PDType1Font.HELVETICA_BOLD, 9f, Color.WHITE)
                 yPosition += 18f
 
                 for ((rowIdx, spesa) in speseAzienda.withIndex()) {
@@ -209,15 +221,15 @@ object PdfGenerator {
                     if (rowIdx % 2 == 1) drawRect(MARGIN, yPosition - 10, PAGE_WIDTH - MARGIN * 2, 16f, Color(0xF5, 0xF5, 0xF5))
                     val desc = spesa.descrizione.ifBlank { spesa.categoria.displayName }
                     drawText(dateFormatter.format(Date(spesa.data)), MARGIN + 10, yPosition, PDType1Font.HELVETICA, 9f)
-                    drawText(truncateText(desc, 20), MARGIN + 80, yPosition, PDType1Font.HELVETICA, 9f)
-                    drawText(truncateText(spesa.categoria.displayName, 12), MARGIN + 250, yPosition, PDType1Font.HELVETICA, 9f)
-                    drawText("€${String.format(Locale.ITALY, "%.2f", spesa.importo)}", PAGE_WIDTH - MARGIN - 60, yPosition, PDType1Font.HELVETICA, 9f)
+                    drawText(truncateText(spesa.categoria.displayName, 8), MARGIN + 58, yPosition, PDType1Font.HELVETICA, 9f)
+                    drawText(truncateText(desc, 42), MARGIN + 88, yPosition, PDType1Font.HELVETICA, 9f)
+                    drawTextRight(String.format(Locale.ITALY, "%.2f", spesa.importo), PAGE_WIDTH - MARGIN - 5, yPosition, PDType1Font.HELVETICA, 9f)
                     yPosition += 16f
                 }
                 yPosition += 5f
                 drawRect(MARGIN, yPosition - 5, PAGE_WIDTH - MARGIN * 2, 20f, Color(0xE3, 0xF2, 0xFD))
-                drawText("TOTALE SPESE:", MARGIN + 10, yPosition + 8, PDType1Font.HELVETICA_BOLD, 10f)
-                drawText("€ ${String.format(Locale.ITALY, "%.2f", notaSpeseConSpese.totalePagatoAzienda)}", PAGE_WIDTH - MARGIN - 90, yPosition + 8, PDType1Font.HELVETICA_BOLD, 11f, Color(0x15, 0x65, 0xC0))
+                drawText("TOT.SPESE:", MARGIN + 10, yPosition + 8, PDType1Font.HELVETICA_BOLD, 10f)
+                drawTextRight("€ ${String.format(Locale.ITALY, "%.2f", notaSpeseConSpese.totalePagatoAzienda)}", PAGE_WIDTH - MARGIN - 5, yPosition + 8, PDType1Font.HELVETICA_BOLD, 11f, Color(0x15, 0x65, 0xC0))
                 yPosition += 30f
             }
 
@@ -241,16 +253,16 @@ object PdfGenerator {
                 val tot = notaSpeseConSpese.totaleByCategoria(cat)
                 if (tot > 0) {
                     drawText(truncateText(cat.displayName, 12), leftX + 10, catY, PDType1Font.HELVETICA, 11f)
-                    drawText("€${String.format(Locale.ITALY, "%.2f", tot)}", leftX + 120, catY, PDType1Font.HELVETICA, 11f)
+                    drawTextRight("€ ${String.format(Locale.ITALY, "%.2f", tot)}", leftX + halfWidth - 5, catY, PDType1Font.HELVETICA, 11f)
                     catY += LINE_HEIGHT
                     catCount++
                 }
             }
             if (haSpeseDipendente) {
                 drawText("Azienda", rightX + 10, yPosition, PDType1Font.HELVETICA, 11f)
-                drawText("€${String.format(Locale.ITALY, "%.2f", notaSpeseConSpese.totalePagatoAzienda)}", rightX + 140, yPosition, PDType1Font.HELVETICA, 11f)
+                drawTextRight("€ ${String.format(Locale.ITALY, "%.2f", notaSpeseConSpese.totalePagatoAzienda)}", rightX + halfWidth - 5, yPosition, PDType1Font.HELVETICA, 11f)
                 drawText("Dipendente", rightX + 10, yPosition + LINE_HEIGHT, PDType1Font.HELVETICA, 11f)
-                drawText("€${String.format(Locale.ITALY, "%.2f", notaSpeseConSpese.totalePagatoDipendente)}", rightX + 140, yPosition + LINE_HEIGHT, PDType1Font.HELVETICA, 11f)
+                drawTextRight("€ ${String.format(Locale.ITALY, "%.2f", notaSpeseConSpese.totalePagatoDipendente)}", rightX + halfWidth - 5, yPosition + LINE_HEIGHT, PDType1Font.HELVETICA, 11f)
                 yPosition = maxOf(catY, yPosition + LINE_HEIGHT * 2)
             } else yPosition = catY
 
@@ -267,16 +279,17 @@ object PdfGenerator {
                 drawText("Km Percorsi:", MARGIN + 20, yPosition + 10, PDType1Font.HELVETICA, 11f)
                 drawText("${String.format(Locale.ITALY, "%.0f", nota.kmPercorsi)} km", MARGIN + 200, yPosition + 10, PDType1Font.HELVETICA_BOLD, 12f, Color(0x15, 0x65, 0xC0))
                 if (nota.costoKmRimborso > 0) {
+                    val kmLeftEdge = 275f
                     drawText("Costo/km rimborso:", MARGIN + 20, yPosition + 28, PDType1Font.HELVETICA, 11f)
-                    drawText("€ ${String.format(Locale.ITALY, "%.2f", nota.costoKmRimborso)}", MARGIN + 200, yPosition + 28, PDType1Font.HELVETICA, 11f)
+                    drawTextRight("€ ${String.format(Locale.ITALY, "%.2f", nota.costoKmRimborso)}", kmLeftEdge, yPosition + 28, PDType1Font.HELVETICA, 11f)
                     drawText("RIMBORSO TRASFERTISTA:", MARGIN + 20, yPosition + 46, PDType1Font.HELVETICA_BOLD, 12f)
-                    drawText("€ ${String.format(Locale.ITALY, "%.2f", nota.totaleRimborsoKm)}", MARGIN + 200, yPosition + 46, PDType1Font.HELVETICA_BOLD, 14f, Color(0x2E, 0x7D, 0x32))
+                    drawTextRight("€ ${String.format(Locale.ITALY, "%.2f", nota.totaleRimborsoKm)}", kmLeftEdge, yPosition + 46, PDType1Font.HELVETICA_BOLD, 14f, Color(0x2E, 0x7D, 0x32))
                 }
                 if (nota.costoKmCliente > 0) {
                     drawText("Costo/km cliente:", MARGIN + 280, yPosition + 10, PDType1Font.HELVETICA, 11f)
-                    drawText("€${String.format(Locale.ITALY, "%.2f", nota.costoKmCliente)}", MARGIN + 400, yPosition + 10, PDType1Font.HELVETICA, 11f)
+                    drawTextRight("€ ${String.format(Locale.ITALY, "%.2f", nota.costoKmCliente)}", PAGE_WIDTH - MARGIN - 5, yPosition + 10, PDType1Font.HELVETICA, 11f)
                     drawText("ADDEBITO CLIENTE:", MARGIN + 280, yPosition + 28, PDType1Font.HELVETICA_BOLD, 12f)
-                    drawText("€${String.format(Locale.ITALY, "%.2f", nota.totaleCostoKmCliente)}", MARGIN + 400, yPosition + 28, PDType1Font.HELVETICA_BOLD, 14f, Color(0x15, 0x65, 0xC0))
+                    drawTextRight("€ ${String.format(Locale.ITALY, "%.2f", nota.totaleCostoKmCliente)}", PAGE_WIDTH - MARGIN - 5, yPosition + 28, PDType1Font.HELVETICA_BOLD, 14f, Color(0x15, 0x65, 0xC0))
                 }
                 yPosition += 90f
                 drawLine(MARGIN, yPosition, PAGE_WIDTH - MARGIN, yPosition)
@@ -296,23 +309,23 @@ object PdfGenerator {
                 var ry = yPosition + 10f
                 if (notaSpeseConSpese.totalePagatoDipendente > 0) {
                     drawText("Spese dipendente:", MARGIN + 20, ry, PDType1Font.HELVETICA, 11f)
-                    drawText("+€${String.format(Locale.ITALY, "%.2f", notaSpeseConSpese.totalePagatoDipendente)}", MARGIN + 180, ry, PDType1Font.HELVETICA, 11f)
+                    drawTextRight("+€ ${String.format(Locale.ITALY, "%.2f", notaSpeseConSpese.totalePagatoDipendente)}", PAGE_WIDTH - MARGIN - 5, ry, PDType1Font.HELVETICA, 11f)
                     ry += 18f
                 }
                 if (nota.totaleRimborsoKm > 0) {
                     drawText("Rimborso km:", MARGIN + 20, ry, PDType1Font.HELVETICA, 11f)
-                    drawText("+€${String.format(Locale.ITALY, "%.2f", nota.totaleRimborsoKm)}", MARGIN + 180, ry, PDType1Font.HELVETICA, 11f)
+                    drawTextRight("+€ ${String.format(Locale.ITALY, "%.2f", nota.totaleRimborsoKm)}", PAGE_WIDTH - MARGIN - 5, ry, PDType1Font.HELVETICA, 11f)
                     ry += 18f
                 }
                 if (nota.anticipo > 0) {
                     drawText("Anticipo:", MARGIN + 20, ry, PDType1Font.HELVETICA, 11f, Color(0xC6, 0x28, 0x28))
-                    drawText("-€${String.format(Locale.ITALY, "%.2f", nota.anticipo)}", MARGIN + 180, ry, PDType1Font.HELVETICA, 11f, Color(0xC6, 0x28, 0x28))
+                    drawTextRight("-€ ${String.format(Locale.ITALY, "%.2f", nota.anticipo)}", PAGE_WIDTH - MARGIN - 5, ry, PDType1Font.HELVETICA, 11f, Color(0xC6, 0x28, 0x28))
                     ry += 18f
                 }
                 val totRimb = notaSpeseConSpese.totaleRimborsoDipendente
                 val colorRimb = if (totRimb >= 0) Color(0x2E, 0x7D, 0x32) else Color(0xC6, 0x28, 0x28)
                 drawText("TOTALE RIMBORSO:", MARGIN + 20, ry + 10, PDType1Font.HELVETICA_BOLD, 12f, colorRimb)
-                drawText("€${String.format(Locale.ITALY, "%.2f", totRimb)}", MARGIN + 180, ry + 10, PDType1Font.HELVETICA_BOLD, 14f, colorRimb)
+                drawTextRight("€ ${String.format(Locale.ITALY, "%.2f", totRimb)}", PAGE_WIDTH - MARGIN - 5, ry + 10, PDType1Font.HELVETICA_BOLD, 14f, colorRimb)
                 yPosition += boxH + 25f
                 drawLine(MARGIN, yPosition, PAGE_WIDTH - MARGIN, yPosition)
                 yPosition += 30f
@@ -326,23 +339,24 @@ object PdfGenerator {
             if (haSpeseDipendente) boxHeight += 18f
             if (nota.totaleRimborsoKm > 0) boxHeight += 18f
             drawRect(MARGIN, yPosition - 10, PAGE_WIDTH - MARGIN * 2, boxHeight, Color(0xE3, 0xF2, 0xFD))
+            val costRight = PAGE_WIDTH - MARGIN - 5
             var cy = yPosition + 10f
             drawText("Spese Azienda:", MARGIN + 20, cy, PDType1Font.HELVETICA, 11f)
-            drawText("€${String.format(Locale.ITALY, "%.2f", notaSpeseConSpese.totalePagatoAzienda)}", MARGIN + 180, cy, PDType1Font.HELVETICA, 11f)
+            drawTextRight("€ ${String.format(Locale.ITALY, "%.2f", notaSpeseConSpese.totalePagatoAzienda)}", costRight, cy, PDType1Font.HELVETICA, 11f)
             cy += 18f
             if (haSpeseDipendente) {
                 drawText("Spese Dipendente:", MARGIN + 20, cy, PDType1Font.HELVETICA, 11f)
-                drawText("€${String.format(Locale.ITALY, "%.2f", notaSpeseConSpese.totalePagatoDipendente)}", MARGIN + 180, cy, PDType1Font.HELVETICA, 11f)
+                drawTextRight("€ ${String.format(Locale.ITALY, "%.2f", notaSpeseConSpese.totalePagatoDipendente)}", costRight, cy, PDType1Font.HELVETICA, 11f)
                 cy += 18f
             }
             if (nota.totaleRimborsoKm > 0) {
                 drawText("Rimborso Km:", MARGIN + 20, cy, PDType1Font.HELVETICA, 11f)
-                drawText("€${String.format(Locale.ITALY, "%.2f", nota.totaleRimborsoKm)}", MARGIN + 180, cy, PDType1Font.HELVETICA, 11f)
+                drawTextRight("€ ${String.format(Locale.ITALY, "%.2f", nota.totaleRimborsoKm)}", costRight, cy, PDType1Font.HELVETICA, 11f)
                 cy += 18f
             }
             cy += 5f
             drawText("COSTO TOTALE:", MARGIN + 20, cy, PDType1Font.HELVETICA_BOLD, 12f)
-            drawText("€${String.format(Locale.ITALY, "%.2f", notaSpeseConSpese.costoComplessivoNotaSpese)}", MARGIN + 180, cy, PDType1Font.HELVETICA_BOLD, 14f, Color(0x15, 0x65, 0xC0))
+            drawTextRight("€ ${String.format(Locale.ITALY, "%.2f", notaSpeseConSpese.costoComplessivoNotaSpese)}", costRight, cy, PDType1Font.HELVETICA_BOLD, 14f, Color(0x15, 0x65, 0xC0))
             yPosition += boxHeight + 25f
 
             // ===== NOTE =====
@@ -352,24 +366,24 @@ object PdfGenerator {
             drawText("NOTE", MARGIN, yPosition, PDType1Font.HELVETICA_BOLD, 14f)
             yPosition += 20f
             contentStream.setNonStrokingColor(Color(0xFA, 0xFA, 0xFA))
-            contentStream.addRect(MARGIN, yCoord(yPosition + 120), PAGE_WIDTH - MARGIN * 2, 120f)
+            contentStream.addRect(MARGIN, yCoord(yPosition + 180), PAGE_WIDTH - MARGIN * 2, 180f)
             contentStream.fill()
             contentStream.setStrokingColor(Color(0xE0, 0xE0, 0xE0))
-            contentStream.addRect(MARGIN, yCoord(yPosition + 120), PAGE_WIDTH - MARGIN * 2, 120f)
+            contentStream.addRect(MARGIN, yCoord(yPosition + 180), PAGE_WIDTH - MARGIN * 2, 180f)
             contentStream.stroke()
             var noteY = yPosition + 10f
-            for (spesa in notaSpeseConSpese.spese.filter { it.descrizione.isNotBlank() }.take(4)) {
-                val descText = "• ${truncateText(spesa.descrizione, 50)} (${truncateText(spesa.categoria.displayName, 10)}, €${String.format(Locale.ITALY, "%.2f", spesa.importo)})"
-                drawText(truncateText(descText, 75), MARGIN + 10, noteY, PDType1Font.HELVETICA, 9f, Color.DARK_GRAY)
+            for (spesa in notaSpeseConSpese.spese.filter { it.descrizione.isNotBlank() }.take(6)) {
+                val descText = "• ${truncateText(spesa.descrizione, 70)} (${truncateText(spesa.categoria.displayName, 10)}, €${String.format(Locale.ITALY, "%.2f", spesa.importo)})"
+                drawText(truncateText(descText, 95), MARGIN + 10, noteY, PDType1Font.HELVETICA, 9f, Color.DARK_GRAY)
                 noteY += 16f
             }
-            yPosition += 135f
+            yPosition += 195f
 
             drawText("v${com.notaspese.desktop.data.model.APP_VERSION} - Pag. $pageNumber", PAGE_WIDTH - MARGIN - 80, yPosition, PDType1Font.HELVETICA, 8f, Color.GRAY)
 
             contentStream.close()
 
-            val pdfFileName = "NotaSpese_${nota.nomeCognome.replace(" ", "_")}_${fileNameDateFormatter.format(Date(nota.dataInizioTrasferta))}.pdf"
+            val pdfFileName = baseName?.let { "$it.pdf" } ?: "NotaSpese_${nota.nomeCognome.replace(" ", "_")}_${fileNameDateFormatter.format(Date(nota.dataInizioTrasferta))}.pdf"
             val pdfFile = File(outputDir, pdfFileName)
             document.save(pdfFile)
             document.close()

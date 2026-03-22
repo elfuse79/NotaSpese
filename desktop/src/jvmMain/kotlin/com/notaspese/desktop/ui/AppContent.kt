@@ -74,7 +74,14 @@ fun AppContent(viewModel: NotaSpeseViewModel) {
                     onDeleteSpesa = { viewModel.deleteSpesa(it) },
                     onEditAnticipo = { viewModel.updateAnticipo(screen.id, it) },
                     onEditNota = { currentScreen = AppScreen.EditNota(screen.id) },
-                    onExport = { viewModel.exportPdfAndCsv(it) }
+                    onExportRequest = { nota, baseName ->
+                        val targetDir = viewModel.chooseExportDirectory()
+                        if (targetDir != null) {
+                            val folder = viewModel.exportPdfAndCsv(nota, targetDir, baseName)
+                            folder?.let { it to it.listFiles()?.find { f -> f.name.endsWith(".pdf", ignoreCase = true) } }
+                        } else null
+                    },
+                    getDefaultExportName = { viewModel.getDefaultExportBaseName(it.notaSpese) }
                 )
                 is AppScreen.AddSpesa -> AddSpesaScreen(
                     notaSpeseId = screen.notaSpeseId,

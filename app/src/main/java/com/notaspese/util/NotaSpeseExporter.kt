@@ -13,12 +13,12 @@ import java.util.zip.ZipOutputStream
  */
 object NotaSpeseExporter {
 
-    fun exportToNotaSpeseFile(context: Context, notaConSpese: NotaSpeseConSpese, outputDir: File): File? {
+    fun exportToNotaSpeseFile(context: Context, notaConSpese: NotaSpeseConSpese, outputDir: File, baseName: String? = null): File? {
         return try {
             val nota = notaConSpese.notaSpese
-            val folderName = "${nota.nomeCognome.replace(" ", "_")}_${java.text.SimpleDateFormat("yyyy-MM-dd_HHmm", java.util.Locale.ITALY).format(java.util.Date(nota.dataInizioTrasferta))}"
-            val baseName = folderName
-            val notaspeseFile = File(outputDir, "$baseName.notaspese")
+            val defaultBaseName = "${nota.nomeCognome.replace(" ", "_")}_${java.text.SimpleDateFormat("yyyy-MM-dd_HHmm", java.util.Locale.ITALY).format(java.util.Date(nota.dataInizioTrasferta))}"
+            val name = baseName ?: defaultBaseName
+            val notaspeseFile = File(outputDir, "$name.notaspese")
 
             val json = buildExportJson(context, notaConSpese)
             val allegatiDir = File(context.cacheDir, "notaspese_export_${System.currentTimeMillis()}")
@@ -85,7 +85,7 @@ object NotaSpeseExporter {
     private fun buildExportJson(context: Context, notaConSpese: NotaSpeseConSpese): String {
         val nota = notaConSpese.notaSpese
         val sb = StringBuilder()
-        sb.append("""{"version":1,"appVersion":"1.2.0","exportDate":${System.currentTimeMillis()},"noteSpese":[{""")
+        sb.append("""{"version":1,"appVersion":"1.3.7","exportDate":${System.currentTimeMillis()},"noteSpese":[{""")
         sb.append(""""numeroNota":"${escape(nota.numeroNota)}",""")
         sb.append(""""nomeCognome":"${escape(nota.nomeCognome)}",""")
         sb.append(""""dataInizioTrasferta":${nota.dataInizioTrasferta},""")

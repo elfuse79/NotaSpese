@@ -12,8 +12,8 @@ android {
         applicationId = "com.notaspese"
         minSdk = 31
         targetSdk = 34
-        versionCode = 10
-        versionName = "1.3.2"
+        versionCode = 15
+        versionName = "1.3.7"
         vectorDrawables { useSupportLibrary = true }
     }
 
@@ -73,4 +73,5 @@ dependencies {
     
     // ExifInterface per correggere l'orientamento delle immagini
     implementation("androidx.exifinterface:exifinterface:1.3.7")
+    implementation("androidx.documentfile:documentfile:1.0.1")
 }

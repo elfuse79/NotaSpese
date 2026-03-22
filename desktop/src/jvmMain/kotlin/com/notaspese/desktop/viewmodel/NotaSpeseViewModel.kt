@@ -120,18 +120,46 @@ class NotaSpeseViewModel {
         }
     }
 
-    fun exportPdfAndCsv(notaConSpese: NotaSpeseConSpese): File? {
+    fun exportPdfAndCsv(notaConSpese: NotaSpeseConSpese, targetParentDir: File? = null, baseName: String? = null): File? {
         val dateFormatter = SimpleDateFormat("yyyy-MM-dd_HHmm", Locale.ITALY)
         val nota = notaConSpese.notaSpese
-        val downloadsDir = File(System.getProperty("user.home"), "Downloads")
-        val innovolDir = File(downloadsDir, "Innoval Nota Spese")
-        val folderName = "${nota.nomeCognome.replace(" ", "_")}_${dateFormatter.format(Date(nota.dataInizioTrasferta))}"
-        val outputDir = File(innovolDir, folderName)
-        outputDir.mkdirs()
-        PdfGenerator.generatePdf(outputDir, notaConSpese)
-        CsvExporter.exportToCsv(notaConSpese, outputDir)
-        NotaSpeseExporter.exportToNotaSpeseFile(notaConSpese, outputDir)
+        val defaultFolderName = "${nota.nomeCognome.replace(" ", "_")}_${dateFormatter.format(Date(nota.dataInizioTrasferta))}"
+        val folderName = baseName?.trim()?.replace(Regex("[\\\\/:*?\"<>|]"), "_")?.ifBlank { null } ?: defaultFolderName
+        val outputDir = if (targetParentDir != null) {
+            File(targetParentDir, folderName).also { it.mkdirs() }
+        } else {
+            val downloadsDir = File(System.getProperty("user.home"), "Downloads")
+            val innovolDir = File(downloadsDir, "Innoval Nota Spese")
+            File(innovolDir, folderName).also { it.mkdirs() }
+        }
+        PdfGenerator.generatePdf(outputDir, notaConSpese, baseName)
+        CsvExporter.exportToCsv(notaConSpese, outputDir, baseName)
+        NotaSpeseExporter.exportToNotaSpeseFile(notaConSpese, outputDir, baseName)
         return outputDir
+    }
+
+    fun getDefaultExportBaseName(nota: com.notaspese.desktop.data.model.NotaSpese): String {
+        val dateFormatter = SimpleDateFormat("yyyy-MM-dd_HHmm", Locale.ITALY)
+        return "${nota.nomeCognome.replace(" ", "_")}_${dateFormatter.format(Date(nota.dataInizioTrasferta))}"
+    }
+
+    fun chooseExportDirectory(): File? {
+        fun showChooser(): File? {
+            return javax.swing.JFileChooser().apply {
+                fileSelectionMode = javax.swing.JFileChooser.DIRECTORIES_ONLY
+                dialogTitle = "Scegli dove salvare la nota spese"
+                currentDirectory = File(System.getProperty("user.home"), "Desktop")
+            }.let {
+                if (it.showSaveDialog(null) == javax.swing.JFileChooser.APPROVE_OPTION) it.selectedFile else null
+            }
+        }
+        return if (java.awt.EventQueue.isDispatchThread()) {
+            showChooser()
+        } else {
+            var result: File? = null
+            java.awt.EventQueue.invokeAndWait { result = showChooser() }
+            result
+        }
     }
 
     fun importFromFolder(folder: File): NotaSpeseConSpese? = CsvImporter.importFromFolder(folder)

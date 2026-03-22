@@ -13,6 +13,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -21,6 +23,7 @@ import java.awt.Desktop
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
+import kotlin.text.RegexOption
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -32,12 +35,16 @@ fun DetailScreen(
     onDeleteSpesa: (Spesa) -> Unit,
     onEditAnticipo: (Double) -> Unit,
     onEditNota: () -> Unit,
-    onExport: (NotaSpeseConSpese) -> File?
+    onExportRequest: (NotaSpeseConSpese, String?) -> Pair<File, File?>?,
+    getDefaultExportName: (NotaSpeseConSpese) -> String
 ) {
     val dateFormatter = remember { SimpleDateFormat("dd/MM/yyyy", Locale.ITALY) }
     var showAnticipoDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf<Spesa?>(null) }
-    var exportFolder by remember { mutableStateOf<File?>(null) }
+    var showExportNameDialog by remember { mutableStateOf(false) }
+    var exportNameInput by remember { mutableStateOf("") }
+    var showOpenPdfDialog by remember { mutableStateOf(false) }
+    var exportedPdfFile by remember { mutableStateOf<File?>(null) }
 
     if (notaSpeseConSpese == null) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -57,8 +64,8 @@ fun DetailScreen(
                     IconButton(onClick = onEditNota) { Icon(Icons.Default.Edit, "Modifica nota") }
                     IconButton(onClick = { showAnticipoDialog = true }) { Icon(Icons.Default.Euro, "Modifica anticipo") }
                     IconButton(onClick = {
-                        val folder = onExport(notaSpeseConSpese)
-                        folder?.let { exportFolder = it; Desktop.getDesktop().open(it) }
+                        exportNameInput = getDefaultExportName(notaSpeseConSpese)
+                        showExportNameDialog = true
                     }) { Icon(Icons.Default.Share, "Esporta PDF e CSV") }
                 }
             )
@@ -220,6 +227,82 @@ fun DetailScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteDialog = null }) { Text("Annulla") }
+            }
+        )
+    }
+
+    if (showExportNameDialog) {
+        AlertDialog(
+            onDismissRequest = { showExportNameDialog = false },
+            title = { Text("Nome cartella e file") },
+            text = {
+                Column {
+                    Text(
+                        "Nome per cartella, PDF, CSV e file .notaspese (senza estensione). Puoi modificarlo:",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = exportNameInput,
+                        onValueChange = { exportNameInput = it },
+                        label = { Text("Nome") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(onClick = {
+                    val baseName = exportNameInput.trim()
+                        .replace(Regex("[\\\\/:*?\"<>|]"), "_")
+                        .replace(Regex("\\.(pdf|csv|notaspese)$", RegexOption.IGNORE_CASE), "")
+                        .trim()
+                        .ifBlank { null }
+                    showExportNameDialog = false
+                    onExportRequest(notaSpeseConSpese, baseName)?.let { (folder, pdfFile) ->
+                        exportedPdfFile = pdfFile
+                        showOpenPdfDialog = true
+                        Desktop.getDesktop().open(folder)
+                    }
+                }) { Text("Continua") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showExportNameDialog = false }) { Text("Annulla") }
+            }
+        )
+    }
+
+    if (showOpenPdfDialog) {
+        AlertDialog(
+            onDismissRequest = { showOpenPdfDialog = false; exportedPdfFile = null },
+            title = { Text("Esportazione completata") },
+            text = {
+                Column {
+                    Text("La cartella contiene: PDF, CSV, file .notaspese e allegati.")
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        "Apri il file .notaspese su Android o Windows per modificare la nota e ricreare il PDF.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    Text("Vuoi aprire il PDF ora?", style = MaterialTheme.typography.bodyMedium)
+                }
+            },
+            confirmButton = {
+                Button(onClick = {
+                    exportedPdfFile?.let { Desktop.getDesktop().open(it) }
+                    showOpenPdfDialog = false
+                    exportedPdfFile = null
+                }) {
+                    Text("Apri PDF")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showOpenPdfDialog = false; exportedPdfFile = null }) {
+                    Text("Chiudi")
+                }
             }
         )
     }
